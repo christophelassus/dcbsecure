@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">DCBSecure</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+
+    <string name="processing">Processing...</string>
+    <string name="sms_verification_failed_credits">We could not send a sms to verify your number. Top-up your phone and try again...</string>
+    <string name="psms_failed_credits">Payment failed (add credits to your phone and try again)</string>
+    <string name="psms_failed_network">Payment failed (network issue)</string>
+    <string name="psms_success">Payment succeeded</string>
+    <string name="psms_pending">Payment is still pending. Access to content is temporarily unlocked until we receive a final response from your network operator.</string>
+
+    <string name="dialog_msisdn_message">FlirtyMob will send a one time SMS message to verify your phone number.</string>
+    <string name="enter_your_number">Enter your phone number</string>
+    <string name="msisdn_sms_message_text">This message was sent by FlirtyMob to verify my number.</string> <!-- Keep this below 160 chars -->
+
+    <string name="verifying_number">Verifying number...</string>
+    <string name="wait_message_error">We could not verify your number</string>
+
+    <string name="payforit_terms">Purchase subject to <u>Merchant</u> and <u>Payforit</u> terms</string>
+    <string name="payforit_cta"><b>Subscribe</b> to FlirtyMob</string>
+</resources>
