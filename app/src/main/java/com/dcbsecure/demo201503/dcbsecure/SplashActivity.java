@@ -152,7 +152,7 @@ public class SplashActivity extends ActionBarActivity {
         if (bPositive != null)
         {
             bPositive.setTextColor(getResources().getColor(android.R.color.white));
-            bPositive.setBackgroundDrawable(getResources().getDrawable(R.drawable.redbutton_nocorner_background));
+            bPositive.setBackgroundDrawable(getResources().getDrawable(R.drawable.greenbutton_nocorner_background));
             bPositive.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20);
         }
 

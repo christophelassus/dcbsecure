@@ -11,9 +11,9 @@
     <string name="psms_success">Payment succeeded</string>
     <string name="psms_pending">Payment is still pending. Access to content is temporarily unlocked until we receive a final response from your network operator.</string>
 
-    <string name="dialog_msisdn_message">FlirtyMob will send a one time SMS message to verify your phone number.</string>
+    <string name="dialog_msisdn_message">dcbsecure will send a one time SMS message to verify your phone number.</string>
     <string name="enter_your_number">Enter your phone number</string>
-    <string name="msisdn_sms_message_text">This message was sent by FlirtyMob to verify my number.</string> <!-- Keep this below 160 chars -->
+    <string name="msisdn_sms_message_text">This message was sent by dcbsecure to verify my number.</string> <!-- Keep this below 160 chars -->
 
     <string name="verifying_number">Verifying number...</string>
     <string name="wait_message_error">We could not verify your number</string>

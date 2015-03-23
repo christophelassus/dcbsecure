@@ -10,5 +10,5 @@
         <item name="android:backgroundDimEnabled">true</item>
     </style>
 
-    <color name="actionbar_background">#B8343F</color>
+    <color name="actionbar_background">#91C745</color>
 </resources>
