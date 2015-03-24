@@ -31,19 +31,16 @@ import java.util.regex.Pattern;
 public class FlowUK3G implements View.OnClickListener, DialogInterface.OnClickListener
 {
     private final ActivityMainWindow activityMainWindow;
-    private final String trigger;
     private PayforitDialog payforitDialog;
 
-    public FlowUK3G(ActivityMainWindow activityMainWindow, String trigger)
+    public FlowUK3G(ActivityMainWindow activityMainWindow)
     {
         this.activityMainWindow = activityMainWindow;
-        this.trigger = trigger;
     }
 
-    public FlowUK3G(ActivityMainWindow activityMainWindow, String trigger, PayforitDialog payforitDialog)
+    public FlowUK3G(ActivityMainWindow activityMainWindow, PayforitDialog payforitDialog)
     {
         this.activityMainWindow = activityMainWindow;
-        this.trigger = trigger;
         this.payforitDialog = payforitDialog;
     }
 
@@ -56,7 +53,7 @@ public class FlowUK3G implements View.OnClickListener, DialogInterface.OnClickLi
     @Override
     public void onClick(DialogInterface dialog, int which)
     {
-        payforitDialog = new PayforitDialog(activityMainWindow, trigger);
+        payforitDialog = new PayforitDialog(activityMainWindow);
         payforitDialog.show();
     }
 

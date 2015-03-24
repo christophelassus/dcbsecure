@@ -16,25 +16,6 @@ import java.util.ArrayList;
 
 public class TrackMgr {
 
-    public static void updateKpi(final Context ctx, String kpi) {
-
-        RequestParams params = new RequestParams();
-        String deviceid = ConfigMgr.lookupDeviceId(ctx);
-        params.put("deviceid", deviceid);
-
-        AsyncRequestUtil.postRequest(ctx, ConfigMgr.getString(ctx, "SERVER") + "/api/track/" + kpi, params, null); //no callback (fire and forget)
-    }
-
-    public static void updateKpiAcceptWithHintOnTrigger(final Context ctx, String trigger) {
-
-        RequestParams params = new RequestParams();
-        String deviceid = ConfigMgr.lookupDeviceId(ctx);
-        params.put("deviceid", deviceid);
-        params.put("trigger", trigger);
-
-        AsyncRequestUtil.postRequest(ctx, ConfigMgr.getString(ctx, "SERVER") + "/api/track/accept", params, null); //no callback (fire and forget)
-    }
-
     public static void event(final Context ctx, String event, RequestParams params) {
 
         if(params==null) params = new RequestParams();

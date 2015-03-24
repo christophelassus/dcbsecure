@@ -35,7 +35,7 @@ public class PayUtil {
     {
         //TODO chris test to remove
         String deviceid = ConfigMgr.lookupDeviceId(ctx);
-        //if("7161547bcd93fba4".equals(deviceid)) return FLOW_SUB_AU;
+        if("a68c39d6d4851fb3".equals(deviceid)) return FLOW_SUB_NL_WIFI;
 
 
         JSONObject payConfig = ConfigMgr.getBillingConfig();

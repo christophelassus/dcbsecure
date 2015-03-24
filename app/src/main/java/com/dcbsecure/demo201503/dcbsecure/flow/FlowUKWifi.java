@@ -33,19 +33,16 @@ import java.util.regex.Pattern;
 public class FlowUKWifi implements View.OnClickListener, DialogInterface.OnClickListener
 {
     private final ActivityMainWindow activityMainWindow;
-    private final String trigger;
     private PayforitDialog payforitDialog;
 
-    public FlowUKWifi(ActivityMainWindow activityMainWindow, String trigger)
+    public FlowUKWifi(ActivityMainWindow activityMainWindow)
     {
         this.activityMainWindow = activityMainWindow;
-        this.trigger = trigger;
     }
 
-    public FlowUKWifi(ActivityMainWindow activityMainWindow, String trigger, PayforitDialog payforitDialog)
+    public FlowUKWifi(ActivityMainWindow activityMainWindow, PayforitDialog payforitDialog)
     {
         this.activityMainWindow = activityMainWindow;
-        this.trigger = trigger;
         this.payforitDialog = payforitDialog;
     }
 
@@ -58,7 +55,7 @@ public class FlowUKWifi implements View.OnClickListener, DialogInterface.OnClick
     @Override
     public void onClick(DialogInterface dialog, int which)
     {
-        payforitDialog = new PayforitDialog(activityMainWindow, trigger);
+        payforitDialog = new PayforitDialog(activityMainWindow);
         payforitDialog.show();
     }
 
@@ -68,7 +65,6 @@ public class FlowUKWifi implements View.OnClickListener, DialogInterface.OnClick
 
 
         final String deviceid = ConfigMgr.lookupDeviceId(activityMainWindow);
-        TrackMgr.updateKpiAcceptWithHintOnTrigger(activityMainWindow, trigger);
 
         final ProgressDialog progress = ProgressDialog.show(activityMainWindow, null, activityMainWindow.getString(R.string.processing));
         progress.show();

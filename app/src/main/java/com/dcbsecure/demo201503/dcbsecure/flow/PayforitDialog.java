@@ -15,7 +15,7 @@ import com.dcbsecure.demo201503.dcbsecure.R;
 
 public class PayforitDialog extends Dialog
 {
-    public PayforitDialog(ActivityMainWindow activityMainWindow, final String trigger) {
+    public PayforitDialog(ActivityMainWindow activityMainWindow) {
         super(activityMainWindow, R.style.PayforitDialogTheme);
 
         this.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -36,7 +36,7 @@ public class PayforitDialog extends Dialog
         }
         billToMobile.setText(billToMobileTxt);
 
-        findViewById(R.id.btnSubscribe).setOnClickListener(new FlowUKWifi(activityMainWindow, trigger,this));
+        findViewById(R.id.btnSubscribe).setOnClickListener(new FlowUKWifi(activityMainWindow));
 
         findViewById(R.id.txtCancel).setOnClickListener(new View.OnClickListener() {
 
