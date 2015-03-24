@@ -66,16 +66,6 @@ public class ActivityMainWindow extends ActionBarActivity {
                 break;
         }
 
-        Button btn_freectp = (Button) findViewById(R.id.btn_freectp);
-        btn_freectp.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String url = "tel:0600000000";
-                Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse(url));
-                startActivity(intent);
-            }
-        });
-
         Button btn_start = (Button) findViewById(R.id.btn_start);
         btn_start.setOnClickListener(new View.OnClickListener() {
             @Override

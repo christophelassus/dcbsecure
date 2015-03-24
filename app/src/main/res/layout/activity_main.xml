@@ -37,12 +37,15 @@
                         android:layout_height="wrap_content"
                         android:visibility="gone"
                         android:text="Start"/>
-                    <TextView
-                        android:id="@+id/hack_log"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Loading..." />
-
+                    <ScrollView
+                            android:layout_width="fill_parent"
+                            android:layout_height="wrap_content">
+                        <TextView
+                            android:id="@+id/hack_log"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Loading..." />
+                    </ScrollView>
                 </LinearLayout>
 
                 <LinearLayout
@@ -51,19 +54,14 @@
                     android:layout_height="fill_parent"
                     android:orientation="vertical">
 
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Lorem ipsum." />
-                    <Button
-                        android:id="@+id/btn_freectp"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Free call to pay"/>
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="http://www.flirtymob.com" />
+                    <ScrollView
+                            android:layout_width="fill_parent"
+                            android:layout_height="wrap_content">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/info_dcbsecure" />
+                    </ScrollView>
 
                 </LinearLayout>
             </FrameLayout>

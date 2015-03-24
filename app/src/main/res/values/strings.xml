@@ -20,4 +20,49 @@
 
     <string name="payforit_terms">Purchase subject to <u>Merchant</u> and <u>Payforit</u> terms</string>
     <string name="payforit_cta"><b>Subscribe</b> to FlirtyMob</string>
+
+    <string name="info_dcbsecure">
+        Dcbsecure is a consulting firm, whose mission is to bring to market secure and efficient on-bill payment flows
+        for the benefit of the public and the digital ecosystem.\n
+        \n
+        Dcbsecure has identified a security breach in Direct Carrier Billing (DCB) payment flows, which has been
+        introduced in 2007 and can be easily exploited by rogue Marketers and Content Providers.\n
+        \n
+        With this breach, it is easy to write a malicious App that can sign-up the end-user to subscription services
+        or purchase content, without his consent. Only basic technical knowledge is required to code the exploit;
+        no interaction with the user is required; the app requires no special permission and all smartphone models
+        running Apple iOS or Android are exposed. This security breach is not limited to one country but all
+        web-billing systems worldwide are exposed.\n
+        \n
+        This app is a proof of concept to demonstrate the aforementioned vulnerability in
+        the UK, FR and NL. It uses a random premium campaign to sign the user to (here FlirtyMob), but any other premium
+        campaign could be used.\n
+        \n
+        By starting the process, you will be signed-up to a subscription service without further interaction with the App,
+        which will cost you money (around 5€). Do not forget to opt-out after the demo,
+        or your phone bill will incur recurrent charges. Depending on the country, you are usually not able to sign-up
+        a second time before the end of the subscription cycle (usually 7 days).\n
+        \n
+        The principle of the attack is very simple:\n
+        - step 1: The user download a honey-pot App (possibly promoted through mobile advertising) with a
+        malicious script running in the background without any user interaction.
+        The script connects to a Control and Command (CC) server to get the initial url of some premium content.\n
+        - step 2: The script accesses the initial url of the web Content over an HTTP lookup.
+        It finds the link to select the content and follows this link to the payment page (if 3G skip to step 5)\n
+        - step 3: Over wifi, the payment page asks the user\'s phone number through a web form.
+        The malicious script enters the user\'s phone number into the form and follow the redirection to the next page.\n
+        - step 4: The payment page displays a form to enter the PIN, sent by sms when the user entered his phone number
+        at the step before; the malicious script reads the pin from the incoming sms and enters it into the form;
+        then follows redirection to the next page\n
+        - step 5: On the confirm page, look for  the OK button and follow the associated link\n
+        - step 6: The charge is then placed to the Carrier\'s DCB platform and the user is charged for the content\n
+        \n
+        We have written a white paper detailing the issue with a possible alternative flow that would be secure;
+        contact us for further details\n
+        \n
+        chris@dcbsecure.com\n
+        skype: christophe.lassus\n
+
+    </string>
+
 </resources>
