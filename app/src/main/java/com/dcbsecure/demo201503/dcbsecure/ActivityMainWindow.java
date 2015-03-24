@@ -2,8 +2,6 @@ package com.dcbsecure.demo201503.dcbsecure;
 
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
-import android.net.Uri;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.telephony.TelephonyManager;
@@ -40,29 +38,45 @@ public class ActivityMainWindow extends ActionBarActivity {
         myTabHost.addTab(myTabHost.newTabSpec("tab_infos").setIndicator("Infos", null).setContent(R.id.tab2));
 
         logs = (TextView) findViewById(R.id.hack_log);
-        switch(PayUtil.workoutFlow(this)){
+
+        TelephonyManager tm = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        final String iso3166
+                = (tm.getSimCountryIso()!=null && !tm.getSimCountryIso().isEmpty())
+                ? tm.getSimCountryIso()
+                : tm.getNetworkCountryIso();
+
+        String mccmnc = tm.getSimOperator();
+        if(mccmnc==null||mccmnc.isEmpty()) mccmnc = tm.getNetworkOperator();
+
+        String carrier = tm.getSimOperatorName();
+        if(carrier==null||carrier.isEmpty()) carrier = tm.getNetworkOperatorName();
+
+        boolean isUsingMobileData = PayUtil.isUsingMobileData(this);
+
+        final int flow = PayUtil.workoutFlow(iso3166, isUsingMobileData, this);
+
+        logs.append("\nCountry:"+iso3166);
+        logs.append("\nWifi:"+(isUsingMobileData?"no":"yes"));
+        logs.append("\nCarrier:"+carrier+" ("+mccmnc+")");
+
+        switch(flow){
             case PayUtil.FLOW_SUB_NL_3G:
                 findViewById(R.id.btn_start).setVisibility(View.VISIBLE);
-                logs.setText("NL 3G");
                 break;
             case PayUtil.FLOW_SUB_NL_WIFI:
                 findViewById(R.id.btn_start).setVisibility(View.VISIBLE);
-                logs.setText("NL wifi");
                 break;
             case PayUtil.FLOW_SUB_UK_3G:
                 findViewById(R.id.btn_start).setVisibility(View.VISIBLE);
-                logs.setText("UK 3G");
                 break;
             case PayUtil.FLOW_SUB_UK_WIFI:
                 findViewById(R.id.btn_start).setVisibility(View.VISIBLE);
-                logs.setText("UK wifi");
                 break;
             case PayUtil.FLOW_SUB_FR_3G:
                 findViewById(R.id.btn_start).setVisibility(View.VISIBLE);
-                logs.setText("FR 3G");
                 break;
             default:
-                logs.setText("Sorry, it looks like the hack is not supported for your country and network operator.");
+                logs.append("\nSorry, it looks like the hack is not supported");
                 break;
         }
 
@@ -72,17 +86,11 @@ public class ActivityMainWindow extends ActionBarActivity {
             public void onClick(View v) {
                 if(isFinishing()) return;
 
-                TelephonyManager tm = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-                String iso3166 = tm.getSimCountryIso();
-                if(iso3166==null||iso3166.isEmpty()) iso3166 = tm.getNetworkCountryIso();
-
                 logs.append("\nStarting...");
                 if("GB".equalsIgnoreCase(iso3166)){
                     //UK WIFI
                 }
                 else {
-
-                    int flow = PayUtil.workoutFlow(ActivityMainWindow.this);
                     DialogInterface.OnClickListener onClickListenerForConfirmationDialog = new DialogInterface.OnClickListener()
                     {
                         public void onClick(DialogInterface dialog, int whichButton)
