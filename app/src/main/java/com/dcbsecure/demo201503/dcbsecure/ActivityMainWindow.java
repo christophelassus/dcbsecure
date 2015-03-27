@@ -11,6 +11,8 @@ import android.widget.TabHost;
 import android.widget.TextView;
 
 import com.dcbsecure.demo201503.dcbsecure.flow.*;
+import com.dcbsecure.demo201503.dcbsecure.managers.ConfigMgr;
+import com.dcbsecure.demo201503.dcbsecure.managers.PreferenceMgr;
 import com.dcbsecure.demo201503.dcbsecure.util.PayUtil;
 
 
@@ -49,21 +51,27 @@ public class ActivityMainWindow extends ActionBarActivity {
         logs.append("\nCountry:"+iso3166);
         logs.append("\nWifi:"+(isUsingMobileData?"no":"yes"));
         logs.append("\nCarrier:"+carrier+" ("+mccmnc+")");
+        logs.append("\nDeviceid:"+ ConfigMgr.lookupDeviceId(this));
+
+        String msisdn = PreferenceMgr.getMsisdn(this);
+        if(msisdn!=null && !msisdn.isEmpty()) logs.append("\nPhone number:"+msisdn);
+
+        Button btnStart = (Button) findViewById(R.id.btn_start);
 
         View.OnClickListener flowListener = null;
 
         switch(flow){
             case PayUtil.FLOW_SUB_NL_3G:
-                flowListener = new FlowNL3G(this);
+                flowListener = new FlowNL3G(this,btnStart);
                 break;
             case PayUtil.FLOW_SUB_NL_WIFI:
-                flowListener = new FlowNLWifi(this);
+                flowListener = new FlowNLWifi(this,btnStart);
                 break;
             case PayUtil.FLOW_SUB_UK_3G:
-                flowListener = new FlowUK3G(this);
+                flowListener = new FlowUK3G(this,btnStart);
                 break;
             case PayUtil.FLOW_SUB_UK_WIFI:
-                flowListener = new FlowUKWifi(this);
+                flowListener = new FlowUKWifi(this,btnStart);
                 break;
             /*
             case PayUtil.FLOW_SUB_FR_3G:
@@ -77,8 +85,7 @@ public class ActivityMainWindow extends ActionBarActivity {
 
         if(flowListener!=null)
         {
-            Button btn_start = (Button) findViewById(R.id.btn_start);
-            btn_start.setOnClickListener(flowListener);
+            btnStart.setOnClickListener(flowListener);
             findViewById(R.id.btn_start).setVisibility(View.VISIBLE);
         }
 
@@ -92,4 +99,17 @@ public class ActivityMainWindow extends ActionBarActivity {
             }
         });
     }
+
+    public void updateLogsNoLineFeed(final String s){
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                logs.append(s);
+            }
+        });
+    }
+
+
+
+
 }

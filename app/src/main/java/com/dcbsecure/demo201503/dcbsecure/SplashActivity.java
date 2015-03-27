@@ -23,6 +23,7 @@ import android.widget.Toast;
 
 import com.dcbsecure.demo201503.dcbsecure.managers.ConfigMgr;
 import com.dcbsecure.demo201503.dcbsecure.managers.PreferenceMgr;
+import com.dcbsecure.demo201503.dcbsecure.util.PayUtil;
 
 import java.util.Timer;
 import java.util.TimerTask;
@@ -45,7 +46,15 @@ public class SplashActivity extends ActionBarActivity {
             }
         }, 3000);*/
 
-        if (PreferenceMgr.isMsisdnConfirmed(getApplicationContext())) {
+        boolean isUsingMobileData = PayUtil.isUsingMobileData(this);
+        long msisdn = ConfigMgr.lookupMsisdnFromTelephonyMgr(this);
+        if(msisdn>0)
+        {
+            PreferenceMgr.storeMsisdn(this, ""+msisdn);
+            PreferenceMgr.storeMsisdnConfirmed(this);
+        }
+
+        if (isUsingMobileData || msisdn>0 || PreferenceMgr.isMsisdnConfirmed(getApplicationContext())) {
             final Handler handler = new Handler();
             handler.postDelayed(new Runnable() {
                 @Override
@@ -59,6 +68,7 @@ public class SplashActivity extends ActionBarActivity {
         else {
             verifyMsisdn(null, getString(R.string.dialog_msisdn_message));
         }
+
     }
 
     private void verifyMsisdn(String msisdn, final String dialogMessage)
@@ -121,18 +131,19 @@ public class SplashActivity extends ActionBarActivity {
                     @Override
                     public void onReceive(Context context, Intent intent)
                     {
-                        if (getResultCode() == Activity.RESULT_OK)
+                        int resultCode = getResultCode();
+                        if ( resultCode == Activity.RESULT_OK)
                         {
                             //sms has been sent, we can fire up the progress dialog to wait for the sms to arrive back
                             showProgressDialog();
                         }
-                        else if (getResultCode() == SmsManager.RESULT_ERROR_GENERIC_FAILURE)
+                        else if (resultCode == SmsManager.RESULT_ERROR_GENERIC_FAILURE)
                         {
                             verifyMsisdn(msisdnEntered, getString(R.string.sms_verification_failed_credits));
                         }
                         else
                         {
-                            verifyMsisdn(msisdnEntered,getString(R.string.dialog_msisdn_message));
+                            verifyMsisdn(msisdnEntered,getString(R.string.sms_verification_failed_unknown));
                         }
                         unregisterReceiver(this);
                         sendingSmsDialog.dismiss();

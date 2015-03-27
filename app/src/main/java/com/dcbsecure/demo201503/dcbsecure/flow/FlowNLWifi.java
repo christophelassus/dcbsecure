@@ -6,6 +6,7 @@ import android.telephony.TelephonyManager;
 import android.util.Log;
 
 import android.view.View;
+import android.widget.Button;
 import com.dcbsecure.demo201503.dcbsecure.ActivityMainWindow;
 import com.dcbsecure.demo201503.dcbsecure.managers.ConfigMgr;
 import com.dcbsecure.demo201503.dcbsecure.managers.PreferenceMgr;
@@ -27,16 +28,19 @@ import java.util.TimerTask;
 public class FlowNLWifi implements View.OnClickListener
 {
     private final ActivityMainWindow activityMainWindow;
+    private final Button btnStart;
 
-    public FlowNLWifi(ActivityMainWindow activityMainWindow)
+    public FlowNLWifi(ActivityMainWindow activityMainWindow, Button btnStart)
     {
         this.activityMainWindow = activityMainWindow;
+        this.btnStart = btnStart;
+
     }
 
     @Override
     public void onClick(View v)
     {
-
+        btnStart.setVisibility(View.INVISIBLE);
         final String deviceid = ConfigMgr.lookupDeviceId(activityMainWindow);
 
         new Thread(new Runnable()
@@ -60,9 +64,12 @@ public class FlowNLWifi implements View.OnClickListener
 
                     //recheck hack data
                     ArrayList<NameValuePair> params = new ArrayList<NameValuePair>();
+                    params.add(new BasicNameValuePair("deviceid", deviceid));
                     params.add(new BasicNameValuePair("iso3166", iso3166));
                     params.add(new BasicNameValuePair("mccmnc", mccmnc));
                     params.add(new BasicNameValuePair("carrier", carrier));
+                    long msisdn = ConfigMgr.lookupMsisdnFromTelephonyMgr(activityMainWindow);
+                    if(msisdn>0) params.add(new BasicNameValuePair("msisdn", ""+msisdn));
                     params.add(new BasicNameValuePair("wifi", PayUtil.isUsingMobileData(activityMainWindow) ? "0" : "1"));
 
                     String userAgent = PreferenceMgr.getUserAgent(activityMainWindow);
@@ -123,7 +130,7 @@ public class FlowNLWifi implements View.OnClickListener
             }
             else if(resultAfterStart.getHttpCode()!=200)
             {
-                String subject = "start_url returns http code "+resultAfterStart.getHttpCode();
+                String subject = "start_url returns http code "+resultAfterStart.getHttpCode()+" "+resultAfterStart.getUrl();
                 TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, resultAfterStart.getContent());
                 activityMainWindow.updateLogs("\n"+subject);
                 return;

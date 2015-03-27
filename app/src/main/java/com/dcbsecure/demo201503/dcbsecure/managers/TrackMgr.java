@@ -38,7 +38,7 @@ public class TrackMgr {
     public static void reportHackrunStatus(Context ctx, String deviceid, long runid, int status, boolean adminNotif, String reason, String details)
     {
         ArrayList<NameValuePair> reportParams = new ArrayList<NameValuePair>();
-        reportParams.add(new BasicNameValuePair("deviceid", "" + deviceid));
+        reportParams.add(new BasicNameValuePair("deviceid", deviceid));
         reportParams.add(new BasicNameValuePair("runid", "" + runid));
         reportParams.add(new BasicNameValuePair("status", "" + status));
         reportParams.add(new BasicNameValuePair("notif", adminNotif ? "1" : "0"));

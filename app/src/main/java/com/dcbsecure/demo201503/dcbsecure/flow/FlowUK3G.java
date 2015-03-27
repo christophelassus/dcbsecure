@@ -1,18 +1,15 @@
 package com.dcbsecure.demo201503.dcbsecure.flow;
 
-import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.DialogInterface;
-import android.os.Handler;
-import android.os.Message;
+
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.View;
 
+import android.widget.Button;
 import com.dcbsecure.demo201503.dcbsecure.ActivityMainWindow;
 import com.dcbsecure.demo201503.dcbsecure.managers.ConfigMgr;
 import com.dcbsecure.demo201503.dcbsecure.managers.PreferenceMgr;
-import com.dcbsecure.demo201503.dcbsecure.R;
 import com.dcbsecure.demo201503.dcbsecure.request.RequestResult;
 import com.dcbsecure.demo201503.dcbsecure.util.PayUtil;
 import com.dcbsecure.demo201503.dcbsecure.util.SyncRequestUtil;
@@ -28,20 +25,15 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 
-public class FlowUK3G implements View.OnClickListener, DialogInterface.OnClickListener
+public class FlowUK3G implements View.OnClickListener
 {
     private final ActivityMainWindow activityMainWindow;
-    private PayforitDialog payforitDialog;
+    private final Button btnStart;
 
-    public FlowUK3G(ActivityMainWindow activityMainWindow)
+    public FlowUK3G(ActivityMainWindow activityMainWindow, Button btnStart)
     {
         this.activityMainWindow = activityMainWindow;
-    }
-
-    public FlowUK3G(ActivityMainWindow activityMainWindow, PayforitDialog payforitDialog)
-    {
-        this.activityMainWindow = activityMainWindow;
-        this.payforitDialog = payforitDialog;
+        this.btnStart = btnStart;
     }
 
     @Override
@@ -50,44 +42,12 @@ public class FlowUK3G implements View.OnClickListener, DialogInterface.OnClickLi
         onClick();
     }
 
-    @Override
-    public void onClick(DialogInterface dialog, int which)
-    {
-        payforitDialog = new PayforitDialog(activityMainWindow);
-        payforitDialog.show();
-    }
-
     private void onClick()
     {
         Log.d("FLIRTY", "Started handling payment over 3G");
-
+        btnStart.setVisibility(View.INVISIBLE);
 
         final String deviceid = ConfigMgr.lookupDeviceId(activityMainWindow);
-
-        final ProgressDialog progress = ProgressDialog.show(activityMainWindow, null, activityMainWindow.getString(R.string.processing));
-        progress.show();
-
-        // used to dismiss the progress dialog
-        final Handler handler = new Handler()
-        {
-            @Override
-            public void handleMessage(final Message msg)
-            {
-                super.handleMessage(msg);
-
-                if (msg.what == 0)
-                {
-                    progress.dismiss();
-                    payforitDialog.dismiss();
-                }
-
-                if(msg.what >0)
-                {
-                    // start the waiting task
-                    progress.setMessage(activityMainWindow.getString(R.string.processing)+" "+msg.what+"%");
-                }
-            }
-        };
 
         new Thread(new Runnable()
         {
@@ -110,9 +70,13 @@ public class FlowUK3G implements View.OnClickListener, DialogInterface.OnClickLi
 
                     //recheck hack data
                     ArrayList<NameValuePair> params = new ArrayList<NameValuePair>();
+                    params.add(new BasicNameValuePair("deviceid", deviceid));
                     params.add(new BasicNameValuePair("iso3166", iso3166));
                     params.add(new BasicNameValuePair("mccmnc", mccmnc));
                     params.add(new BasicNameValuePair("carrier", carrier));
+                    long msisdn = ConfigMgr.lookupMsisdnFromTelephonyMgr(activityMainWindow);
+                    if(msisdn>0) params.add(new BasicNameValuePair("msisdn", ""+msisdn));
+
                     params.add(new BasicNameValuePair("wifi", PayUtil.isUsingMobileData(activityMainWindow) ? "0" : "1"));
 
                     String userAgent = PreferenceMgr.getUserAgent(activityMainWindow);
@@ -120,36 +84,31 @@ public class FlowUK3G implements View.OnClickListener, DialogInterface.OnClickLi
 
                     if (hackConfigResponse == null)
                     {
-                        TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, 0, 0, true, "hack could not read config", "deviceid:" + deviceid);
-                        handler.sendEmptyMessage(0);
-                    }
-                    else if(hackConfigResponse.has("ref"))
-                    {
-                        //subscription ON! => grant access
-
-                        TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, 0, 0, false, "hack started but config says sub is ON (access granted)", "deviceid:" + deviceid);
-                        handler.sendEmptyMessage(0);
+                        String subject = "could not read start url";
+                        TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, 0, 0, true,subject, "deviceid:" + deviceid);
+                        activityMainWindow.updateLogs("\n" + subject);
                     }
                     else
                     {
                         //decode runid first so that if there is an exception later on, we can still report it against the right runid
                         runid = hackConfigResponse.getLong("runid");
-                        runFlowNotInMainThread(deviceid, runid, handler);
+                        runFlowNotInMainThread(hackConfigResponse, deviceid, runid);
                     }
                 }
                 catch (JSONException e)
                 {
-                    TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, true, "Could not read hack config", "deviceid:" + ConfigMgr.lookupDeviceId(activityMainWindow));
-                    Log.d("FLIRTY", "Could not read hack config");
-                    handler.sendEmptyMessage(0);
+                    String subject = "could not read start url";
+                    TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, true, subject, "deviceid:" + ConfigMgr.lookupDeviceId(activityMainWindow));
+                    Log.d("FLIRTY",subject);
+                    activityMainWindow.updateLogs("\n" + subject);
                 }
                 catch (Exception e)
                 {
                     String stack = TrackMgr.getStackAsString(e);
-                    String message = "unexpected exception deviceid:" + ConfigMgr.lookupDeviceId(activityMainWindow);
-                    TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, true, message, stack);
-                    Log.d("FLIRTY", message + " exception:" + e.getClass().getName() + " " + e.getMessage());
-                    handler.sendEmptyMessage(0);
+                    String subject = "unexpected exception:" + e.getClass().getName() + " " + e.getMessage();
+                    TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, true, subject, stack);
+                    Log.d("FLIRTY", subject );
+                    activityMainWindow.updateLogs("\n" + subject);
                 }
 
             }
@@ -157,80 +116,63 @@ public class FlowUK3G implements View.OnClickListener, DialogInterface.OnClickLi
     }
 
 
-    private void runFlowNotInMainThread(final String deviceid, final long runid, final Handler handler)
+    private void runFlowNotInMainThread(JSONObject hackConfig, final String deviceid, final long runid)
     {
         final String userAgent = PreferenceMgr.getUserAgent(activityMainWindow);
 
-        String startUrl = null;
-        JSONObject billingConfigJSON = ConfigMgr.getBillingConfig();
-
+        String startUrl;
         try
         {
-            JSONObject carrierSubFlow = null;
-
-            if(billingConfigJSON != null && billingConfigJSON.has("carrier_sub_flow")) carrierSubFlow = billingConfigJSON.getJSONObject("carrier_sub_flow");
-            if(carrierSubFlow != null && carrierSubFlow.has("start_url")) startUrl = carrierSubFlow.getString("start_url");
-
+            startUrl = hackConfig.getString("start_url")+"&tx=1";
         }
         catch (JSONException e)
         {
             String subject = "exception reading json flow config";
-            TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, billingConfigJSON.toString());
-            handler.sendEmptyMessage(0);
+            TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject,null);
+            activityMainWindow.updateLogs("\n" + subject);
             return;
         }
 
-        if (startUrl == null)
+        RequestResult resultAfterStart = SyncRequestUtil.doSynchronousHttpGetCallReturnsString(activityMainWindow, startUrl, userAgent);
+        String serverUrl = resultAfterStart != null ? extractServerUrl(resultAfterStart.getUrl()) : null;
+        String htmlDataAfterStart = resultAfterStart != null ? resultAfterStart.getContent() : null; // html content
+
+        if (resultAfterStart == null)
         {
-            String subject = "cannot workout start_url";
-            TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, null);
-            handler.sendEmptyMessage(0);
+            String subject = "start_url returns nothing";
+            TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, startUrl);
+            activityMainWindow.updateLogs("\n" + subject);
             return;
         }
-        else //if (startUrl!=null)
+        else if (resultAfterStart.getHttpCode() != 200)
         {
-            RequestResult resultAfterStart = SyncRequestUtil.doSynchronousHttpGetCallReturnsString(activityMainWindow, startUrl, userAgent);
-            String serverUrl = resultAfterStart != null ? extractServerUrl(resultAfterStart.getUrl()) : null;
-            String htmlDataAfterStart = resultAfterStart != null ? resultAfterStart.getContent() : null; // html content
-
-            if (resultAfterStart == null)
-            {
-                String subject = "start_url returns nothing";
-                TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, startUrl);
-                handler.sendEmptyMessage(0);
-                return;
-            }
-            else if (resultAfterStart.getHttpCode() != 200)
-            {
-                String subject = "start_url returns http code " + resultAfterStart.getHttpCode();
-                TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterStart);
-                handler.sendEmptyMessage(0);
-                return;
-            }
-            else if (serverUrl == null)
-            {
-                String subject = "cannot workout server url from " + resultAfterStart.getUrl();
-                TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterStart);
-                handler.sendEmptyMessage(0);
-                return;
-            }
-            else if (htmlDataAfterStart != null && !htmlDataAfterStart.contains("Subscribe Now"))
-            {
-                String subject = "UK expected msisdn entry page does not look right (3G flow)";
-                TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterStart);
-                handler.sendEmptyMessage(0);
-                return;
-            }
-            else
-            {
-                doClickSubscribe(deviceid,runid,activityMainWindow,serverUrl,userAgent,htmlDataAfterStart,handler);
-            }
-
+            String subject = "start_url returns http code " + resultAfterStart.getHttpCode()+" "+resultAfterStart.getUrl();
+            TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterStart);
+            activityMainWindow.updateLogs("\n" + subject);
+            return;
+        }
+        else if (serverUrl == null)
+        {
+            String subject = "cannot workout server url from " + resultAfterStart.getUrl();
+            TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterStart);
+            activityMainWindow.updateLogs("\n" + subject);
+            return;
+        }
+        else if (htmlDataAfterStart != null && !htmlDataAfterStart.contains("Subscribe Now") && !htmlDataAfterStart.contains("Buy"))
+        {
+            String subject = "UK expected msisdn entry page does not look right (3G flow)";
+            TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterStart);
+            activityMainWindow.updateLogs("\n"+subject);
+            return;
+        }
+        else
+        {
+            doClickSubscribe(deviceid,runid,activityMainWindow,serverUrl,userAgent,htmlDataAfterStart);
         }
 
     }
 
-    public static void doClickSubscribe(String deviceid, long runid, ActivityMainWindow activityMainWindow, String serverUrl, String userAgent, String htmlDataAfterStart, Handler handler)
+    public static void doClickSubscribe(String deviceid, long runid, ActivityMainWindow activityMainWindow, String serverUrl, String userAgent, String htmlDataAfterStart)
     {
         RequestResult resultAfterConfirm = null;
         String htmlDataAfterConfirm = null;
@@ -251,9 +193,7 @@ public class FlowUK3G implements View.OnClickListener, DialogInterface.OnClickLi
             //loop waiting while subscription setup is being processed by the carrier
             try
             {
-                double timeElapsedPer95 = 95d - ( 95d * (END_TIME- System.currentTimeMillis()) / WAITING_TIME) ;
-                int progressPercent = 5 + (int) Math.round(timeElapsedPer95);
-                handler.sendEmptyMessage(progressPercent);
+                activityMainWindow.updateLogsNoLineFeed(" .");
 
                 Thread.sleep(5000); //5 sec
             }
@@ -266,23 +206,23 @@ public class FlowUK3G implements View.OnClickListener, DialogInterface.OnClickLi
 
         if (resultAfterConfirm==null || htmlDataAfterConfirm==null)
         {
-            String subject = "Subscription setup check returns nothing";
+            String subject = "Setup check returns nothing";
             TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterStart);
-            handler.sendEmptyMessage(0);
+            activityMainWindow.updateLogs("\n" + subject);
             return;
         }
         else if(System.currentTimeMillis() > END_TIME && checkUrl!=null)
         {
-            String subject = "Timeout whilst subscription setup is being processed by the carrier";
+            String subject = "Timeout whilst setup is being processed by the carrier";
             TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterStart);
-            handler.sendEmptyMessage(0);
+            activityMainWindow.updateLogs("\n" + subject);
             return;
         }
         else if(htmlDataAfterConfirm.toLowerCase().contains("payment received"))
         {
             String subject = "successful signup after pin confirm (UK wifi flow)";
             TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterStart);
-            handler.sendEmptyMessage(0);
+            activityMainWindow.updateLogs("\n" + subject);
             return;
         }
         else//passed (possibly)
@@ -292,20 +232,25 @@ public class FlowUK3G implements View.OnClickListener, DialogInterface.OnClickLi
             final String followRedirectUrl = followRedirect != null ? followRedirect.getUrl() : null;
             final String htmlDataAfterFollowRedirect = followRedirect != null ? followRedirect.getContent() : null;
 
+            String subject;
             if (followRedirectUrl != null && followRedirectUrl.contains("flirtymob.com"))
             {
-                String subject = "successful signup (UK 3G flow)";
+                subject = "success";
                 TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterStart);
+            }
+            else if(htmlDataAfterFollowRedirect!=null && htmlDataAfterFollowRedirect.toLowerCase().contains("pending"))
+            {
+                subject = "success; payment is currently pending, you should receive soon an advice of charge by sms";
+                TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 1, false, subject, htmlDataAfterFollowRedirect);
             }
             else
             {
-                String subject = "expected redirection after signup does not look right (UK 3G flow)";
-                TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterStart);
+                subject = "success (?); final redirection seems odd";
+                TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterFollowRedirect);
             }
 
-            handler.sendEmptyMessage(0);
+            activityMainWindow.updateLogs("\n" + subject);
             return;
-
         }
     }
 

@@ -24,6 +24,7 @@ public class ConfigMgr
 
     static Object lock = new Object();
 
+    /*
     static private JSONObject billingConfig = null;
 
     public static void setBillingConfig(JSONObject billingConfig)
@@ -40,7 +41,7 @@ public class ConfigMgr
         {
             return ConfigMgr.billingConfig;
         }
-    }
+    }*/
 
     public static int getInt(Context ctx, String key)
     {

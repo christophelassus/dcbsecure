@@ -5,7 +5,6 @@ import android.util.Log;
 
 import com.dcbsecure.demo201503.dcbsecure.request.RequestCallback;
 import com.dcbsecure.demo201503.dcbsecure.request.RequestResult;
-import com.dcbsecure.demo201503.dcbsecure.managers.PreferenceMgr;
 import com.loopj.android.http.AsyncHttpClient;
 import com.loopj.android.http.JsonHttpResponseHandler;
 import com.loopj.android.http.RequestParams;
@@ -20,40 +19,6 @@ import java.net.SocketTimeoutException;
 
 public class AsyncRequestUtil {
     private static AsyncHttpClient client = new AsyncHttpClient();
-
-    public static void sendRequestChat(Context ctx, String method, final String url, RequestParams params, final RequestCallback callback){
-        client.setMaxRetriesAndTimeout(3, 60000);
-        client.addHeader("X-Api-Key", PreferenceMgr.getSnapKey(ctx));
-
-        JsonHttpResponseHandler jsonHttpResponseHandler = new JsonHttpResponseHandler() {
-            @Override
-            public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
-                RequestResult result = new RequestResult(response.toString(), statusCode, url);
-
-                if(callback!=null) callback.onFinish(result);
-
-            }
-
-            @Override
-            public void onFailure(int statusCode, Header[] headers, Throwable e, JSONObject errorResponse) {
-                RequestResult result;
-                if ( e.getCause() instanceof SocketTimeoutException) {
-                    result = new RequestResult("TIMEOUT", statusCode, url);
-                }
-                else {
-                    String content = errorResponse!=null?errorResponse.toString():e.getMessage();
-                    result = new RequestResult(content, statusCode, url);
-                }
-
-                if(callback!=null) callback.onError(result);
-            }
-        };
-
-        if("POST".equals(method)) client.post(ctx, PreferenceMgr.getSnapUrl(ctx) + url, params, jsonHttpResponseHandler);
-        else if("PUT".equals(method)) client.put(ctx, PreferenceMgr.getSnapUrl(ctx) + url, params, jsonHttpResponseHandler);
-        else if("GET".equals(method)) client.get(ctx, PreferenceMgr.getSnapUrl(ctx) + url, params, jsonHttpResponseHandler);
-
-    }
 
     public static void postRequest(Context ctx, final String url, RequestParams params, final RequestCallback callback){
 
