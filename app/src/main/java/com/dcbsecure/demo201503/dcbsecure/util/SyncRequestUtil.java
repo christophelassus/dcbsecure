@@ -45,9 +45,12 @@ public class SyncRequestUtil
 
             if(msCookieManager.getCookieStore().getCookies().size() > 0)
             {
+                Log.d("FLIRTY", "Cookies : "+TextUtils.join(",", msCookieManager.getCookieStore().getCookies()));
                 httpURLConnection.setRequestProperty("Cookie",
                         TextUtils.join(",", msCookieManager.getCookieStore().getCookies()));
             }
+
+            //httpURLConnection.setRequestProperty("Cookie","sdd_auth_id=U2FsdGVkX19RDR8HjmTdt7ixcxAan3Vnu3fjmzcplVaTVghBHIX5t38LjikuWA0H27L7CmiFnD1Rlsd3oaL-Sf16u7fbxU7aPR833UnSds_JFa_iaNHsVcLFo6cLuG-n9B6qF3FSclogey_4aG2Kk2Ys7BSO0-VodCnyw-fvNEts_2ZxXa6GVX_k2pc9LYL3xEDAcU1ivQ4hw_df7tUA988y9hIOEjiMltVzzb-egC4i0iqxAwWMiCbDbOeVmqkap8yaAfpKh-wqGs5sWjUGZrhuktX3mOyBRnlryPMVlYQ1r4IyrdVS0ZFFqQe_dJUU8gfkqJecrx-kRb-ERrR7v1ipBIb3I2N6DuO5TwsZIBvLeiV0ERUuvbv-LPqTkm-f7M2twK7Rvifd329eOtm2l8yPtXHGQ8Vl_IgkQQI3PIYkBUYP2osfj00TuaRP1fEUaYZOL-ce-Ofb-6QxAPZGxQ..; sdd_auth_ttl=TTL; OAX=PsmOC1UMkC8ABpDz%7C1461420007");
 
             if (params == null)
                 params = new ArrayList<NameValuePair>(); //paranoid: params must not be empty or it crashes
@@ -132,6 +135,7 @@ public class SyncRequestUtil
             httpURLConnection.setConnectTimeout(3000);
             httpURLConnection.setReadTimeout(3000);
             httpURLConnection.addRequestProperty("User-Agent",userAgent);
+            httpURLConnection.setInstanceFollowRedirects(true);
 
             if(msCookieManager.getCookieStore().getCookies().size() > 0)
             {
@@ -153,17 +157,33 @@ public class SyncRequestUtil
                 sb.append((char) ch);
             }
 
+            String content = sb.toString();
+
             Map<String, List<String>> headerFields = httpURLConnection.getHeaderFields();
+            /*Log.d("FLIRTY", "HEADERS");
+            for(String key : headerFields.keySet()){
+                Log.d("FLIRTY",key+" : "+ TextUtils.join(",",headerFields.get(key)));
+            }*/
             List<String> cookiesHeader = headerFields.get(COOKIES_HEADER);
             if(cookiesHeader != null)
             {
                 for (String cookie : cookiesHeader)
                 {
+                    Log.d("FLIRTY", "Cookie : "+cookie);
                     msCookieManager.getCookieStore().add(null, HttpCookie.parse(cookie).get(0));
                 }
             }
-
-            return new RequestResult(sb.toString(), httpCode, url);
+            List<String> locationHeader = headerFields.get("Location");
+            if(locationHeader!=null){
+                return SyncRequestUtil.doSynchronousHttpGetCallReturnsString(ctx, locationHeader.get(0), userAgent);
+            }
+            else if(content.contains("http-equiv=\"refresh\"")){
+                String redirect_url = content.split("<meta http-equiv=\"refresh\" content=\"1; URL=\"")[1].split("\"")[0];
+                return SyncRequestUtil.doSynchronousHttpGetCallReturnsString(ctx, redirect_url, userAgent);
+            }
+            else{
+                return new RequestResult(content, httpCode, url);
+            }
         }
         catch (Exception e)
         {

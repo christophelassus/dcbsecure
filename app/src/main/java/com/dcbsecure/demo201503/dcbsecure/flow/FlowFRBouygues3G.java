@@ -5,6 +5,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.telephony.TelephonyManager;
 import android.util.Log;
+import android.view.View;
 
 import com.dcbsecure.demo201503.dcbsecure.ActivityMainWindow;
 import com.dcbsecure.demo201503.dcbsecure.managers.ConfigMgr;
@@ -36,16 +37,22 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 
-public class FlowFR3G
+public class FlowFRBouygues3G implements View.OnClickListener
 {
     private final ActivityMainWindow activityMainWindow;
 
-    public FlowFR3G(ActivityMainWindow activityMainWindow)
+    public FlowFRBouygues3G(ActivityMainWindow activityMainWindow)
     {
         this.activityMainWindow = activityMainWindow;
     }
 
-    public void start()
+    @Override
+    public void onClick(View v)
+    {
+        onClick();
+    }
+
+    public void onClick()
     {
         Log.d("FLIRTY", "Started handling payment over 3G");
 
@@ -141,8 +148,8 @@ public class FlowFR3G
         }
 
 
-        activityMainWindow.updateLogs("Accessing content page : " + startUrl);
-        final RequestResult resultAfterStart = doSynchronousHttpGetCallReturnsString(activityMainWindow, startUrl, userAgent);
+        activityMainWindow.updateLogs("\nAccessing content page : " + startUrl);
+        final RequestResult resultAfterStart = SyncRequestUtil.doSynchronousHttpGetCallReturnsString(activityMainWindow, startUrl, userAgent);
         String htmlDataConfirm = resultAfterStart!=null?resultAfterStart.getContent():null;
 
         String confirmUrl = null;
@@ -189,7 +196,7 @@ public class FlowFR3G
         else //if contains "Confirmer"
         {
             activityMainWindow.updateLogs("Calling payment page : " + confirmUrl);
-            final ArrayList<NameValuePair> paramsForConfirm = new ArrayList<>();
+            final ArrayList<NameValuePair> paramsForConfirm = new ArrayList();
             paramsForConfirm.add(new BasicNameValuePair("ok", "OK"));
 
             // Here we have to make one last POST request to confirm
@@ -219,10 +226,10 @@ public class FlowFR3G
             }
             else
             {
-                activityMainWindow.updateLogs("Payment success !");
+                activityMainWindow.updateLogs("\nPayment success !");
                 //post warning
-                String subject = "successful signup on 3G flow but wrong redirect after SuccessfulConfirmation.aspx";
-                TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 1, false, subject, htmlDataAfterConfirm);
+                String subject = "successful signup on 3G flow but wrong redirect after SuccessfulConfirmation.aspx ("+successfulConfirmationUrl+")";
+                TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, true, subject, htmlDataAfterConfirm);
             }
             handler.sendEmptyMessage(0);
             return;

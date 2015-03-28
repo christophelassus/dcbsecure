@@ -73,11 +73,10 @@ public class ActivityMainWindow extends ActionBarActivity {
             case PayUtil.FLOW_SUB_UK_WIFI:
                 flowListener = new FlowUKWifi(this,btnStart);
                 break;
-            /*
             case PayUtil.FLOW_SUB_FR_3G:
-                flowListener = new FlowFR3G(ActivityMainWindow.this);
+                flowListener = new FlowFRBouygues3G(ActivityMainWindow.this);
 
-                break;*/
+                break;
             default:
                 logs.append("\nSorry, it looks like the hack is currently not supported for your country or carrier");
                 break;
