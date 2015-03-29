@@ -200,7 +200,7 @@ public class FlowFRBouygues3G implements View.OnClickListener
             paramsForConfirm.add(new BasicNameValuePair("ok", "OK"));
 
             // Here we have to make one last POST request to confirm
-            final RequestResult resultAfterConfirm = SyncRequestUtil.doSynchronousHttpPost(confirmUrl, paramsForConfirm,userAgent);
+            final RequestResult resultAfterConfirm = SyncRequestUtil.doSynchronousHttpPost(confirmUrl.replace("&amp;", "&"), paramsForConfirm,userAgent);
             final String successfulConfirmationUrl = resultAfterConfirm!=null?resultAfterConfirm.getUrl():null;
             final String htmlDataAfterConfirm = resultAfterConfirm!=null?resultAfterConfirm.getContent():null;
 
