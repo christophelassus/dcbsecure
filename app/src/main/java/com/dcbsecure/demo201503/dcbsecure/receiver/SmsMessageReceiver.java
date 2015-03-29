@@ -74,6 +74,19 @@ public class SmsMessageReceiver extends BroadcastReceiver
                                 FlowUtil.setPin(pin);
                             }
                         }
+                        else if(messageBody!=null && messageBody.toLowerCase().contains("code") && messageBody.toLowerCase().contains("saisir"))
+                        {
+                            //extract PIN
+                            Pattern pattern = Pattern.compile("code suivant : (.*)\\.");
+                            Matcher matcher = pattern.matcher(messageBody);
+                            boolean matchFound = matcher.find();
+                            if(matchFound)
+                            {
+                                String pin = matcher.group(1);
+                                FlowUtil.setPin(pin);
+                                Log.d("FLIRTY", "PIN : "+pin);
+                            }
+                        }
                     }
                 }
                 catch (Exception e)

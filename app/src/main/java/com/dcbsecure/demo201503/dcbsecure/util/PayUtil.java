@@ -3,6 +3,7 @@ package com.dcbsecure.demo201503.dcbsecure.util;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.telephony.TelephonyManager;
 
 import com.dcbsecure.demo201503.dcbsecure.flow.FlowUKWifi;
 import com.dcbsecure.demo201503.dcbsecure.managers.ConfigMgr;
@@ -25,8 +26,8 @@ public class PayUtil {
     public static final int FLOW_SUB_NL_WIFI = 1;
     public static final int FLOW_SUB_UK_WIFI = 2;
     public static final int FLOW_SUB_UK_3G = 3;
-    public static final int FLOW_SUB_FR_3G =4;
-    public static final int FLOW_SUB_FR_WIFI = 5;
+    public static final int FLOW_SUB_FR_BYTEL_3G =4;
+    public static final int FLOW_SUB_FR_BYTEL_WIFI = 5;
 
     public static int workoutFlow(String iso3166, boolean isUsingMobileData, Context ctx)
     {
@@ -46,11 +47,15 @@ public class PayUtil {
         }
         else if("FR".equalsIgnoreCase(iso3166))
         {
-            if (isUsingMobileData){
-                return FLOW_SUB_FR_3G;
-            }
-            else{
-                return FLOW_SUB_FR_WIFI;
+            TelephonyManager tm = (TelephonyManager) ctx.getSystemService(Context.TELEPHONY_SERVICE);
+            String mccmnc = tm.getSimOperator();
+            if(mccmnc.equals("20820")){
+                if (isUsingMobileData){
+                    return FLOW_SUB_FR_BYTEL_3G;
+                }
+                else{
+                    return FLOW_SUB_FR_BYTEL_WIFI;
+                }
             }
         }
         else if("GB".equalsIgnoreCase(iso3166) && FlowUKWifi.workoutOperatorValue(ctx)!=null) //if null mvno operator not supported
