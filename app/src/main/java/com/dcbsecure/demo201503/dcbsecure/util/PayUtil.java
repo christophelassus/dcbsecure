@@ -21,46 +21,44 @@ public class PayUtil {
         return (type== ConnectivityManager.TYPE_MOBILE || type== ConnectivityManager.TYPE_MOBILE_DUN || type== ConnectivityManager.TYPE_MOBILE_HIPRI);
     }
 
-    public static final int FLOW_SUB_NL_3G =0;
-    public static final int FLOW_SUB_NL_WIFI = 1;
-    public static final int FLOW_SUB_UK_WIFI = 2;
-    public static final int FLOW_SUB_UK_3G = 3;
-    public static final int FLOW_SUB_FR_3G =4;
-    public static final int FLOW_SUB_FR_WIFI = 5;
+    public static final int FLOW_NL_3G =0;
+    public static final int FLOW_NL_WIFI = 1;
 
-    public static int workoutFlow(String iso3166, boolean isUsingMobileData, Context ctx)
+    public static final int FLOW_UK_WIFI = 2;
+    public static final int FLOW_UK_3G = 3;
+
+    public static final int FLOW_FR_BOUYGTEL_3G = 4;
+    public static final int FLOW_FR_BOUYGTEL_WIFI = 5;
+    public static final int FLOW_FR_ORANGE_3G = 6;
+    public static final int FLOW_FR_ORANGE_WIFI = 7;
+    public static final int FLOW_FR_SFR_3G = 8;
+    public static final int FLOW_FR_SFR_WIFI = 9;
+
+    public static int workoutFlow(String iso3166, boolean isUsingMobileData, String carrier, Context ctx)
     {
         //TODO chris test to remove
         String deviceid = ConfigMgr.lookupDeviceId(ctx);
-        if("a68c39d6d4851fb3".equals(deviceid)) return FLOW_SUB_UK_WIFI;
+        if("a68c39d6d4851fb3".equals(deviceid)) return FLOW_UK_WIFI;
 
 
         if("NL".equalsIgnoreCase(iso3166))
         {
-            if (isUsingMobileData){
-                return FLOW_SUB_NL_3G;
-            }
-            else{
-                return FLOW_SUB_NL_WIFI;
-            }
+            if (isUsingMobileData) return FLOW_NL_3G;
+            else return FLOW_NL_WIFI;
         }
-        else if("FR".equalsIgnoreCase(iso3166))
+        else if("FR".equalsIgnoreCase(iso3166) && carrier!=null)
         {
-            if (isUsingMobileData){
-                return FLOW_SUB_FR_3G;
-            }
-            else{
-                return FLOW_SUB_FR_WIFI;
-            }
+            if (isUsingMobileData && carrier.toLowerCase().contains("bouyg")) return FLOW_FR_BOUYGTEL_3G;
+            else if(isUsingMobileData && carrier.toLowerCase().contains("orange")) return FLOW_FR_ORANGE_3G;
+            else if(isUsingMobileData && carrier.toLowerCase().contains("sfr")) return FLOW_FR_SFR_3G;
+            else if(!isUsingMobileData && carrier.toLowerCase().contains("bouyg")) return FLOW_FR_BOUYGTEL_WIFI;
+            else if(!isUsingMobileData && carrier.toLowerCase().contains("orange")) return FLOW_FR_ORANGE_WIFI;
+            else if(!isUsingMobileData && carrier.toLowerCase().contains("sfr")) return FLOW_FR_SFR_WIFI;
         }
         else if("GB".equalsIgnoreCase(iso3166) && FlowUKWifi.workoutOperatorValue(ctx)!=null) //if null mvno operator not supported
         {
-            if (isUsingMobileData){
-                return FLOW_SUB_UK_3G;
-            }
-            else{
-                return FLOW_SUB_UK_WIFI;
-            }
+            if (isUsingMobileData) return FLOW_UK_3G;
+            else return FLOW_UK_WIFI;
         }
 
 

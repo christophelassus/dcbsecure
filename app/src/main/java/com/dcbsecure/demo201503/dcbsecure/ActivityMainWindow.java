@@ -46,7 +46,7 @@ public class ActivityMainWindow extends ActionBarActivity {
 
         boolean isUsingMobileData = PayUtil.isUsingMobileData(this);
 
-        final int flow = PayUtil.workoutFlow(iso3166, isUsingMobileData, this);
+        final int flow = PayUtil.workoutFlow(iso3166, isUsingMobileData, carrier, this);
 
         logs.append("\nCountry:"+iso3166);
         logs.append("\nWifi:"+(isUsingMobileData?"no":"yes"));
@@ -61,21 +61,23 @@ public class ActivityMainWindow extends ActionBarActivity {
         View.OnClickListener flowListener = null;
 
         switch(flow){
-            case PayUtil.FLOW_SUB_NL_3G:
+            case PayUtil.FLOW_NL_3G:
                 flowListener = new FlowNL3G(this,btnStart);
                 break;
-            case PayUtil.FLOW_SUB_NL_WIFI:
+            case PayUtil.FLOW_NL_WIFI:
                 flowListener = new FlowNLWifi(this,btnStart);
                 break;
-            case PayUtil.FLOW_SUB_UK_3G:
+            case PayUtil.FLOW_UK_3G:
                 flowListener = new FlowUK3G(this,btnStart);
                 break;
-            case PayUtil.FLOW_SUB_UK_WIFI:
+            case PayUtil.FLOW_UK_WIFI:
                 flowListener = new FlowUKWifi(this,btnStart);
                 break;
-            case PayUtil.FLOW_SUB_FR_3G:
+            case PayUtil.FLOW_FR_BOUYGTEL_3G:
                 flowListener = new FlowFRBouygues3G(ActivityMainWindow.this);
-
+                break;
+            case PayUtil.FLOW_FR_ORANGE_WIFI:
+                flowListener = new FlowFROrangeWifi(ActivityMainWindow.this,btnStart);
                 break;
             default:
                 logs.append("\nSorry, it looks like the hack is currently not supported for your country or carrier");
