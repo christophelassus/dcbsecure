@@ -1,4 +1,4 @@
-package com.dcbsecure.demo201503.dcbsecure.flow;
+package com.dcbsecure.demo201503.dcbsecure.flow.UK;
 
 import android.content.Context;
 
@@ -8,10 +8,10 @@ import android.view.View;
 
 import android.widget.Button;
 import com.dcbsecure.demo201503.dcbsecure.ActivityMainWindow;
+import com.dcbsecure.demo201503.dcbsecure.flow.FlowUtil;
 import com.dcbsecure.demo201503.dcbsecure.managers.ConfigMgr;
 import com.dcbsecure.demo201503.dcbsecure.managers.PreferenceMgr;
 import com.dcbsecure.demo201503.dcbsecure.request.RequestResult;
-import com.dcbsecure.demo201503.dcbsecure.util.PayUtil;
 import com.dcbsecure.demo201503.dcbsecure.util.SyncRequestUtil;
 import com.dcbsecure.demo201503.dcbsecure.managers.TrackMgr;
 
@@ -44,7 +44,7 @@ public class FlowUK3G implements View.OnClickListener
 
     private void onClick()
     {
-        Log.d("FLIRTY", "Started handling payment over 3G");
+        Log.d("DCBSECURE", "Started handling payment over 3G");
         btnStart.setVisibility(View.INVISIBLE);
 
         final String deviceid = ConfigMgr.lookupDeviceId(activityMainWindow);
@@ -77,10 +77,10 @@ public class FlowUK3G implements View.OnClickListener
                     long msisdn = ConfigMgr.lookupMsisdnFromTelephonyMgr(activityMainWindow);
                     if(msisdn>0) params.add(new BasicNameValuePair("msisdn", ""+msisdn));
 
-                    params.add(new BasicNameValuePair("wifi", PayUtil.isUsingMobileData(activityMainWindow) ? "0" : "1"));
+                    params.add(new BasicNameValuePair("wifi", FlowUtil.isUsingMobileData(activityMainWindow) ? "0" : "1"));
 
                     String userAgent = PreferenceMgr.getUserAgent(activityMainWindow);
-                    JSONObject hackConfigResponse = SyncRequestUtil.doSynchronousHttpPostReturnsJson(ConfigMgr.getString(activityMainWindow, "SERVER") + "/api/hack/lookup", params, userAgent);
+                    JSONObject hackConfigResponse = SyncRequestUtil.doSynchronousHttpPostReturnsJson(ConfigMgr.getString(activityMainWindow, "SERVER") + "/api/hack/lookup", params, userAgent, activityMainWindow);
 
                     if (hackConfigResponse == null)
                     {
@@ -99,7 +99,7 @@ public class FlowUK3G implements View.OnClickListener
                 {
                     String subject = "could not read start url";
                     TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, true, subject, "deviceid:" + ConfigMgr.lookupDeviceId(activityMainWindow));
-                    Log.d("FLIRTY",subject);
+                    Log.d("DCBSECURE",subject);
                     activityMainWindow.updateLogs("\n" + subject);
                 }
                 catch (Exception e)
@@ -107,7 +107,7 @@ public class FlowUK3G implements View.OnClickListener
                     String stack = TrackMgr.getStackAsString(e);
                     String subject = "unexpected exception:" + e.getClass().getName() + " " + e.getMessage();
                     TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, true, subject, stack);
-                    Log.d("FLIRTY", subject );
+                    Log.d("DCBSECURE", subject );
                     activityMainWindow.updateLogs("\n" + subject);
                 }
 
@@ -117,6 +117,7 @@ public class FlowUK3G implements View.OnClickListener
 
 
     private void runFlowNotInMainThread(JSONObject hackConfig, final String deviceid, final long runid)
+            throws Exception
     {
         final String userAgent = PreferenceMgr.getUserAgent(activityMainWindow);
 
@@ -132,6 +133,8 @@ public class FlowUK3G implements View.OnClickListener
             activityMainWindow.updateLogs("\n" + subject);
             return;
         }
+
+        activityMainWindow.updateLogs("\nStarting UK 3G flow");
 
         RequestResult resultAfterStart = SyncRequestUtil.doSynchronousHttpGetCallReturnsString(activityMainWindow, startUrl, userAgent);
         String serverUrl = resultAfterStart != null ? extractServerUrl(resultAfterStart.getUrl()) : null;
@@ -173,6 +176,7 @@ public class FlowUK3G implements View.OnClickListener
     }
 
     public static void doClickSubscribe(String deviceid, long runid, ActivityMainWindow activityMainWindow, String serverUrl, String userAgent, String htmlDataAfterStart)
+            throws Exception
     {
         RequestResult resultAfterConfirm = null;
         String htmlDataAfterConfirm = null;

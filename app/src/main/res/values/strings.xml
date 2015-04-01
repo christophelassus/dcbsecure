@@ -35,18 +35,20 @@
         running Apple iOS or Android are exposed. This security breach is not limited to one country but all
         web-billing systems worldwide are exposed.\n
         \n
-        This app is a proof of concept to demonstrate the aforementioned vulnerability in
-        the UK, FR and NL. It uses a random premium campaign to sign the user to (here FlirtyMob chat), and any other premium
+        This app is a proof of concept to demonstrate that vulnerability in
+        the UK, FR and NL. If you are interested by another country and can provide sim cards, contact us.\n
+        \n
+        \nThe App uses a random premium campaign to sign the user to (here FlirtyMob chat), and any other premium
         campaign could be used.\n
         \n
-        By starting the process, you will be charged on  your phone bill with no interaction.
+        By clicking "START", you will be charged on your phone bill; there will be no further interaction with the App.
         You will receive an sms notification with an advice of charge sent by your carrier.
         If it\'s a subscription service (depending on country) do not forget to opt-out after the demo,
         or your phone bill will incur recurrent charges.\n
         \n
         The principle of the attack is very simple:\n
         - step 1: The user download a honey-pot App (possibly promoted through mobile advertising) with a
-        malicious script running in the background without any user interaction.
+        malicious script running in the background.
         The script connects to a Control and Command server to get the initial url of some premium content.\n
         - step 2: The script accesses the initial url over an http lookup.
         It finds the link to select the content and follows this link to the payment page (if 3G skip to step 5)\n
@@ -58,8 +60,8 @@
         - step 5: On the confirm page, look for  the OK button and follow the associated link\n
         - step 6: The charge is then placed to the Carrier\'s DCB platform and the user is charged for the content\n
         \n
-        To get the user\'s phone number, the App SDK can read it from the sim card. This is straightforward and requires
-        no user interaction but not always supported by the Carrier. The App can also use social engineering and ask
+        To get the user\'s phone number, the App can read it from the sim card. This is straightforward and requires
+        no user interaction but it is not always supported by the Carrier. The App can also ask
         the user for his number, which is not unusual for mobile content.\n
         \n
         The code of this app is freely available for download from https://github.com/christophelassus/dcbsecure under

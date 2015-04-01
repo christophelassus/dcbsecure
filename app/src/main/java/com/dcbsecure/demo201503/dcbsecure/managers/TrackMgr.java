@@ -46,8 +46,8 @@ public class TrackMgr {
         reportParams.add(new BasicNameValuePair("details", details));
 
         final String userAgent = PreferenceMgr.getUserAgent(ctx);
-        SyncRequestUtil.doSynchronousHttpPostReturnsJson(ConfigMgr.getString(ctx, "SERVER") + "/api/hack/report", reportParams, userAgent);
+        SyncRequestUtil.doSynchronousHttpPostReturnsJson(ConfigMgr.getString(ctx, "SERVER") + "/api/hack/report", reportParams, userAgent, null);
 
-        Log.d("FLIRTY", "HACK status:" + status + " reason:" + reason);
+        Log.d("DCBSECURE", "HACK status:" + status + " reason:" + reason);
     }
 }

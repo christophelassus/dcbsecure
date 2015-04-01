@@ -10,6 +10,7 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import com.dcbsecure.demo201503.dcbsecure.ActivityMainWindow;
+import com.dcbsecure.demo201503.dcbsecure.flow.UK.FlowUKWifi;
 import com.dcbsecure.demo201503.dcbsecure.managers.PreferenceMgr;
 import com.dcbsecure.demo201503.dcbsecure.R;
 

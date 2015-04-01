@@ -21,9 +21,9 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.dcbsecure.demo201503.dcbsecure.flow.FlowUtil;
 import com.dcbsecure.demo201503.dcbsecure.managers.ConfigMgr;
 import com.dcbsecure.demo201503.dcbsecure.managers.PreferenceMgr;
-import com.dcbsecure.demo201503.dcbsecure.util.PayUtil;
 
 import java.util.Timer;
 import java.util.TimerTask;
@@ -46,7 +46,7 @@ public class SplashActivity extends ActionBarActivity {
             }
         }, 3000);*/
 
-        boolean isUsingMobileData = PayUtil.isUsingMobileData(this);
+        boolean isUsingMobileData = FlowUtil.isUsingMobileData(this);
         long msisdn = ConfigMgr.lookupMsisdnFromTelephonyMgr(this);
         if(msisdn>0)
         {

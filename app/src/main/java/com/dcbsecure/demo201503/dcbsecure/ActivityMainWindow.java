@@ -10,10 +10,16 @@ import android.widget.Button;
 import android.widget.TabHost;
 import android.widget.TextView;
 
-import com.dcbsecure.demo201503.dcbsecure.flow.*;
+import com.dcbsecure.demo201503.dcbsecure.flow.FR.Bouygues.FlowFRBouygues3G;
+import com.dcbsecure.demo201503.dcbsecure.flow.FR.Orange.FlowFROrange3G;
+import com.dcbsecure.demo201503.dcbsecure.flow.FR.Orange.FlowFROrangeWifi;
+import com.dcbsecure.demo201503.dcbsecure.flow.FlowUtil;
+import com.dcbsecure.demo201503.dcbsecure.flow.NL.FlowNL3G;
+import com.dcbsecure.demo201503.dcbsecure.flow.NL.FlowNLWifi;
+import com.dcbsecure.demo201503.dcbsecure.flow.UK.FlowUK3G;
+import com.dcbsecure.demo201503.dcbsecure.flow.UK.FlowUKWifi;
 import com.dcbsecure.demo201503.dcbsecure.managers.ConfigMgr;
 import com.dcbsecure.demo201503.dcbsecure.managers.PreferenceMgr;
-import com.dcbsecure.demo201503.dcbsecure.util.PayUtil;
 
 
 public class ActivityMainWindow extends ActionBarActivity {
@@ -44,9 +50,9 @@ public class ActivityMainWindow extends ActionBarActivity {
         String carrier = tm.getSimOperatorName();
         if(carrier==null||carrier.isEmpty()) carrier = tm.getNetworkOperatorName();
 
-        boolean isUsingMobileData = PayUtil.isUsingMobileData(this);
+        boolean isUsingMobileData = FlowUtil.isUsingMobileData(this);
 
-        final int flow = PayUtil.workoutFlow(iso3166, isUsingMobileData, carrier, this);
+        final int flow = FlowUtil.workoutFlow(iso3166, isUsingMobileData, carrier, this);
 
         logs.append("\nCountry:"+iso3166);
         logs.append("\nWifi:"+(isUsingMobileData?"no":"yes"));
@@ -61,23 +67,26 @@ public class ActivityMainWindow extends ActionBarActivity {
         View.OnClickListener flowListener = null;
 
         switch(flow){
-            case PayUtil.FLOW_NL_3G:
+            case FlowUtil.FLOW_NL_3G:
                 flowListener = new FlowNL3G(this,btnStart);
                 break;
-            case PayUtil.FLOW_NL_WIFI:
+            case FlowUtil.FLOW_NL_WIFI:
                 flowListener = new FlowNLWifi(this,btnStart);
                 break;
-            case PayUtil.FLOW_UK_3G:
+            case FlowUtil.FLOW_UK_3G:
                 flowListener = new FlowUK3G(this,btnStart);
                 break;
-            case PayUtil.FLOW_UK_WIFI:
+            case FlowUtil.FLOW_UK_WIFI:
                 flowListener = new FlowUKWifi(this,btnStart);
                 break;
-            case PayUtil.FLOW_FR_BOUYGTEL_3G:
+            case FlowUtil.FLOW_FR_BOUYGTEL_3G:
                 flowListener = new FlowFRBouygues3G(ActivityMainWindow.this);
                 break;
-            case PayUtil.FLOW_FR_ORANGE_WIFI:
+            case FlowUtil.FLOW_FR_ORANGE_WIFI:
                 flowListener = new FlowFROrangeWifi(ActivityMainWindow.this,btnStart);
+                break;
+            case FlowUtil.FLOW_FR_ORANGE_3G:
+                flowListener = new FlowFROrange3G(ActivityMainWindow.this,btnStart);
                 break;
             default:
                 logs.append("\nSorry, it looks like the hack is currently not supported for your country or carrier");

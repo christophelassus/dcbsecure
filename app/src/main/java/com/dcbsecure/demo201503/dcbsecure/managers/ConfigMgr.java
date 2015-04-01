@@ -87,7 +87,7 @@ public class ConfigMgr
     private static String readHostRoleMapping(Context ctx)
     {
         String deviceId = lookupDeviceId(ctx);
-        Log.d("FLIRTY", "deviceId:" + deviceId);
+        Log.d("DCBSECURE", "deviceId:" + deviceId);
 
         String debugApp = Settings.System.getString(ctx.getContentResolver(), Settings.Global.DEBUG_APP);
         if (debugApp != null && debugApp.toLowerCase().contains("flirtymob"))
